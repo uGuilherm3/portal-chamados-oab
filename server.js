@@ -31,9 +31,9 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } 
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 const transporter = nodemailer.createTransport({
@@ -72,10 +72,10 @@ app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const chamados = await fs.readJson(DATA_FILE);
-        
+
         // Procurar por ID ou Protocolo
         const chamado = chamados.find(c => c.id === id || c.protocolo === id);
-        
+
         if (!chamado) return res.status(404).json({ error: 'Chamado não encontrado' });
 
         // Retorna apenas dados não sensíveis
@@ -98,7 +98,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
         const { id } = req.params;
         const { status, observacao } = req.body;
         let chamados = await fs.readJson(DATA_FILE);
-        
+
         const index = chamados.findIndex(c => c.id === id);
         if (index === -1) return res.status(404).json({ error: 'Chamado não encontrado' });
 
@@ -108,7 +108,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
         if (status && status !== chamadoAntigo.status) {
             chamados[index].status = status;
             statusMudou = true;
-            
+
             // Gerar protocolo se estiver em "Em Atendimento" pela primeira vez
             if (status === 'Em Atendimento' && !chamados[index].protocolo) {
                 const ano = new Date().getFullYear();
@@ -116,7 +116,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
                 chamados[index].protocolo = `${ano}-CH${random}`;
             }
         }
-        
+
         if (observacao !== undefined) chamados[index].observacao = observacao;
 
         await fs.writeJson(DATA_FILE, chamados);
@@ -187,7 +187,7 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
         const mailOptions = {
             from: 'smtp_glpi@oabce.org.br',
             replyTo: email,
-            to: 'ti@oabce.org.br', // Alterado conforme conversas anteriores
+            to: 'chamado@oabce.org.br', // Alterado conforme conversas anteriores
             subject: `Novo Chamado: ${assunto} - ${nome}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; color: #333;">
@@ -204,7 +204,7 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
                     <p style="background: #f4f4f4; padding: 15px; border-radius: 5px;">${descricao.replace(/\n/g, '<br>')}</p>
                 </div>
             `,
-            attachments: anexosFormatados 
+            attachments: anexosFormatados
         };
 
         await transporter.sendMail(mailOptions);

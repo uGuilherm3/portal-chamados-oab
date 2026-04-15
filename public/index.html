@@ -27,9 +27,9 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-[#131313] min-h-screen selection:bg-[#303030]/60 font-sans text-slate-200 overflow-x-hidden">
+<body class="bg-[#131313] h-screen selection:bg-[#303030]/60 font-sans text-slate-200 overflow-hidden">
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+    <div class="grid grid-cols-1 lg:grid-cols-2 h-screen overflow-hidden">
                 <div class="relative flex flex-col lg:items-center lg:justify-center overflow-hidden h-auto lg:h-full min-h-[30vh] lg:min-h-screen">
             <div class="absolute inset-0 z-10 p-6 md:p-12 lg:p-20 flex items-center justify-center lg:justify-start" style="background: linear-gradient(to bottom right, #8D3046, #254E70)">
                 <div class="absolute top-0 left-0 w-72 h-72 bg-white/10 blur-[100px] rounded-full pointer-events-none"></div>
@@ -57,17 +57,15 @@
             </div>
         </div>
 
-        <div class="relative p-4 md:p-12 lg:px-20 flex flex-col items-center bg-[#131313] overflow-y-auto">
-
-            <div class="w-full max-w-2xl mx-auto py-6 md:py-1">
+        <div class="relative flex flex-col bg-[#131313] h-full overflow-y-auto custom-scrollbar">
+            <div class="w-full max-w-2xl mx-auto px-6 md:px-12 py-12">
                 
-                <!-- Navegação Superior -->
-                <div class="flex justify-center mb-8 md:mb-12">
+                <div class="flex justify-center mb-10">
                     <div class="inline-flex bg-[#1e1e1e] p-1 rounded-2xl border border-white/5">
-                        <button id="btnViewAbrir" onclick="alternarTela('abrir')" class="px-4 md:px-7 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black">
+                        <button id="btnViewAbrir" onclick="alternarTela('abrir')" class="px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black whitespace-nowrap">
                             Abrir Chamado
                         </button>
-                        <button id="btnViewConsultar" onclick="alternarTela('consultar')" class="px-4 md:px-7 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white">
+                        <button id="btnViewConsultar" onclick="alternarTela('consultar')" class="px-5 md:px-8 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white whitespace-nowrap">
                             Consultar Status
                         </button>
                     </div>
@@ -77,98 +75,97 @@
                     <span id="textoStatus"></span>
                 </div>
 
-                <!-- VISTA: ABRIR CHAMADO -->
-                <div id="viewAbrir" class="animate-in fade-in duration-500">
-                    <div class="mb-10 text-center">
-                        <h2 class="text-white text-2xl md:text-3xl font-bold tracking-tight">Novo Chamado</h2>
-                        <p class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] mt-3">Preencha os campos abaixo</p>
-                    </div>
-
-                    <form id="chamadoForm" class="relative" enctype="multipart/form-data">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 md:gap-y-6">
-                            
-                            <div class="md:col-span-2">
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Seu Nome *</label>
-                                <input type="text" id="nome" name="nome" required placeholder="Nome completo" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-[9px) font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">CPF *</label>
-                                <input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00" maxlength="14" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">E-mail *</label>
-                                <input type="email" id="email" name="email" required placeholder="email@exemplo.com" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Telefone *</label>
-                                <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000" maxlength="15" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Número da OAB</label>
-                                <input type="text" id="numero" name="numero" placeholder="00000" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Assunto *</label>
-                                <select id="assunto" name="assunto" required class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-pointer">
-                                    <option value="" disabled selected class="text-slate-500">Selecione uma opção...</option>
-                                    <option value="INSS/GERID">INSS/GERID</option>
-                                    <option value="CADASTRO SAP">CADASTRO SAP</option>
-                                </select>
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Anexar Imagens (Máx 4)</label>
-                                <input type="file" id="inputImagens" accept="image/*" multiple class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-slate-200 cursor-pointer border-none">
-                                
-                                <div id="previewContainer" class="flex flex-wrap gap-3 mt-3"></div>
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Descrição do Problema *</label>
-                                <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva sua solicitação com detalhes..." class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all resize-none"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="mt-10 w-full">
-                            <button type="submit" id="btnSubmit" class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none shadow-none">
-                                Enviar Chamado
-                            </button>
-                        </div>
-                    </form>
+                <!-- CABEÇALHO FIXO (Não muda de posição) -->
+                <div class="mb-10 text-center">
+                    <h2 id="mainTitle" class="text-white text-2xl md:text-3xl font-bold tracking-tight">Novo Chamado</h2>
+                    <p id="mainSubtitle" class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] mt-3">Preencha os campos abaixo</p>
                 </div>
 
-                <!-- VISTA: CONSULTAR CHAMADO -->
-                <div id="viewConsultar" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div class="mb-10 text-center">
-                        <h2 class="text-white text-2xl md:text-3xl font-bold tracking-tight">Consultar Status</h2>
-                        <p class="text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] mt-3">Acompanhe seu atendimento</p>
+                <!-- ÁREA DE CONTEÚDO DINÂMICO -->
+                <div class="relative">
+                    <!-- VISTA: ABRIR CHAMADO -->
+                    <div id="viewAbrir">
+                        <form id="chamadoForm" class="relative" enctype="multipart/form-data">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 md:gap-y-6">
+                                
+                                <div class="md:col-span-2">
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Seu Nome *</label>
+                                    <input type="text" id="nome" name="nome" required placeholder="Nome completo" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">CPF *</label>
+                                    <input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00" maxlength="14" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">E-mail *</label>
+                                    <input type="email" id="email" name="email" required placeholder="email@exemplo.com" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Telefone *</label>
+                                    <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000" maxlength="15" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Número da OAB</label>
+                                    <input type="text" id="numero" name="numero" placeholder="00000" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Assunto *</label>
+                                    <select id="assunto" name="assunto" required class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white border-none transition-all cursor-pointer">
+                                        <option value="" disabled selected class="text-slate-500">Selecione uma opção...</option>
+                                        <option value="INSS/GERID">INSS/GERID</option>
+                                        <option value="CADASTRO SAP">CADASTRO SAP</option>
+                                    </select>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Anexar Imagens (Máx 4)</label>
+                                    <input type="file" id="inputImagens" accept="image/*" multiple class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-bold file:bg-white file:text-black hover:file:bg-slate-200 cursor-pointer border-none">
+                                    
+                                    <div id="previewContainer" class="flex flex-wrap gap-3 mt-3"></div>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Descrição do Problema *</label>
+                                    <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva sua solicitação com detalhes..." class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none transition-all resize-none"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="mt-10 w-full pb-10">
+                                <button type="submit" id="btnSubmit" class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none shadow-none">
+                                    Enviar Chamado
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
-                    <div class="relative">
+                    <!-- VISTA: CONSULTAR CHAMADO -->
+                    <div id="viewConsultar" class="hidden">
                         <div id="formConsulta">
-                            <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
-                                <div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 md:gap-y-6">
+                                <div class="md:col-span-2">
                                     <label class="block text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Protocolo ou ID do Chamado *</label>
-                                    <div class="flex flex-col md:flex-row gap-3">
-                                        <input type="text" id="inputProtocoloCentral" placeholder="Ex: 2026-CH1234" class="flex-1 bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none outline-none focus:bg-white/5 transition-all">
-                                        <button onclick="consultarChamadoCentral()" class="bg-white text-black px-8 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all shadow-none border-none">
-                                            Consultar
-                                        </button>
-                                    </div>
+                                    <input type="text" id="inputProtocoloCentral" placeholder="Ex: 2026-CH1234" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 border-none outline-none focus:bg-white/5 transition-all">
+                                </div>
+                                
+                                <div class="md:col-span-2 mt-4 pb-10">
+                                    <button onclick="consultarChamadoCentral()" class="w-full bg-white text-black py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all shadow-none border-none">
+                                        Consultar Status
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div id="resultadoConsultaCentral" class="hidden mt-10 pt-10 border-t border-white/5 animate-in fade-in duration-500">
+                        <div id="resultadoConsultaCentral" class="hidden mt-10 pt-10 border-t border-white/5">
                             <!-- Preenchido via JS -->
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
             </div>
         </div>
@@ -338,17 +335,26 @@
             const viewConsultar = document.getElementById('viewConsultar');
             const btnAbrir = document.getElementById('btnViewAbrir');
             const btnConsultar = document.getElementById('btnViewConsultar');
+            const mainTitle = document.getElementById('mainTitle');
+            const mainSubtitle = document.getElementById('mainSubtitle');
+
+            const activeClass = "px-4 md:px-7 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all bg-white text-black text-center";
+            const inactiveClass = "px-4 md:px-7 py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white text-center";
 
             if (tela === 'abrir') {
                 viewConsultar.classList.add('hidden');
                 viewAbrir.classList.remove('hidden');
-                btnAbrir.className = "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black text-center";
-                btnConsultar.className = "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white text-center";
+                btnAbrir.className = activeClass;
+                btnConsultar.className = inactiveClass;
+                mainTitle.textContent = 'Novo Chamado';
+                mainSubtitle.textContent = 'Preencha os campos abaixo';
             } else {
                 viewAbrir.classList.add('hidden');
                 viewConsultar.classList.remove('hidden');
-                btnConsultar.className = "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-white text-black text-center";
-                btnAbrir.className = "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-white text-center";
+                btnConsultar.className = activeClass;
+                btnAbrir.className = inactiveClass;
+                mainTitle.textContent = 'Consultar Status';
+                mainSubtitle.textContent = 'Acompanhe seu atendimento';
             }
         }
 
