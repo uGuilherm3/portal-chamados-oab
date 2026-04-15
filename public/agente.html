@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Agente - Helpdesk OAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Verificação de autenticação
+        if (!localStorage.getItem('agente_token')) {
+            window.location.href = '/login.html';
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #131313; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .modal-active { overflow: hidden; }
+    </style>
+</head>
+<body class="bg-[#131313] min-h-screen font-sans text-slate-200">
+
+    <nav class="border-b border-white/5 bg-[#131313]/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-gradient-to-br from-[#8D3046] to-[#254E70] rounded-lg"></div>
+                <div>
+                    <h1 class="text-white font-bold tracking-tight">Helpdesk <span class="text-[#8D3046]">Agente</span></h1>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Painel de Gestão</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="text-[10px] font-bold uppercase text-slate-400 hover:text-white transition-colors tracking-widest bg-white/5 px-4 py-2 rounded-lg">
+                Sair
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 lg:p-10">
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div>
+                <h2 class="text-3xl font-bold text-white tracking-tight">Chamados Recentes</h2>
+                <p class="text-slate-500 text-sm mt-1">Gerencie as solicitações de suporte técnico.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-[#1e1e1e] rounded-xl px-4 py-2 border border-white/5 text-xs font-medium text-slate-400">
+                    Total: <span id="totalCount" class="text-white">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="chamadosList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Chamados serão inseridos aqui -->
+            <div class="col-span-full py-20 text-center text-slate-600 animate-pulse">
+                Carregando chamados...
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes -->
+    <div id="modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-[#1e1e1e] shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-full" id="modalContent">
+            <div class="p-8 border-b border-white/5 flex items-center justify-between">
+                <div>
+                    <span id="modalId" class="text-[10px] font-bold text-[#8D3046] uppercase tracking-[0.2em]">#0000000000</span>
+                    <h3 id="modalAssunto" class="text-2xl font-bold text-white mt-1">Assunto do Chamado</h3>
+                </div>
+                <button onclick="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors text-white text-2xl">×</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 space-y-8">
+                <!-- Status e Data -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-[#131313] p-4 rounded-xl border border-white/5">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status Atual</p>
+                        <select id="updateStatus" class="bg-transparent text-white font-bold text-sm outline-none border-none w-full cursor-pointer">
+                            <option value="Aberto">Aberto</option>
+                            <option value="Em Atendimento">Em Atendimento</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="bg-[#131313] p-4 rounded-xl border border-white/5">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Aberto em</p>
+                        <span id="modalData" class="text-white font-bold text-sm">--/--/--</span>
+                    </div>
+                </div>
+
+                <!-- Solicitante -->
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informações do Solicitante</h4>
+                    <div class="grid grid-cols-2 gap-y-4 text-sm">
+                        <div>
+                            <p class="text-slate-500 text-xs">Nome</p>
+                            <p id="modalNome" class="text-white font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-xs">CPF</p>
+                            <p id="modalCpf" class="text-white font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-xs">E-mail</p>
+                            <p id="modalEmail" class="text-white font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-xs">Telefone</p>
+                            <p id="modalTelefone" class="text-white font-medium"></p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-slate-500 text-xs">Nº OAB</p>
+                            <p id="modalOab" class="text-white font-medium"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descrição -->
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Descrição do Problema</h4>
+                    <div id="modalDescricao" class="bg-[#131313] p-6 rounded-xl text-sm leading-relaxed text-slate-300 border border-white/5 whitespace-pre-line"></div>
+                </div>
+
+                <!-- Imagens -->
+                <div id="modalImagensSection" class="space-y-4 hidden">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Anexos</h4>
+                    <div id="modalImagens" class="flex flex-wrap gap-4"></div>
+                </div>
+
+                <!-- Observação Interna -->
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Observação Interna (Agente)</h4>
+                    <textarea id="updateObservacao" rows="4" class="w-full bg-[#131313] rounded-xl p-4 text-sm text-white placeholder-slate-700 border border-white/5 focus:border-[#8D3046]/50 transition-colors outline-none resize-none" placeholder="Adicione notas sobre este atendimento..."></textarea>
+                </div>
+            </div>
+
+            <div class="p-8 border-t border-white/5 bg-[#1e1e1e]">
+                <button onclick="saveChanges()" id="btnSave" class="w-full bg-[#8D3046] text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#a13b54] transition-colors flex items-center justify-center gap-2">
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chamados = [];
+        let currentChamadoId = null;
+
+        async function loadChamados() {
+            try {
+                const response = await fetch('/api/chamados');
+                chamados = await response.json();
+                renderChamados();
+            } catch (err) {
+                console.error('Erro ao carregar chamados');
+            }
+        }
+
+        function renderChamados() {
+            const list = document.getElementById('chamadosList');
+            const total = document.getElementById('totalCount');
+            total.textContent = chamados.length;
+
+            if (chamados.length === 0) {
+                list.innerHTML = '<div class="col-span-full py-20 text-center text-slate-600">Nenhum chamado registrado.</div>';
+                return;
+            }
+
+            list.innerHTML = chamados.map(c => `
+                <div onclick="openModal('${c.id}')" class="group bg-[#1e1e1e] border border-white/5 hover:border-[#8D3046]/30 p-6 rounded-2xl transition-all cursor-pointer relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 flex flex-col items-end gap-2">
+                        <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${getStatusClass(c.status)}">
+                            ${c.status}
+                        </span>
+                        ${c.protocolo ? `<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-1.5 py-0.5 rounded">Prot: ${c.protocolo}</span>` : ''}
+                    </div>
+                    
+                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">#${c.id}</span>
+                    <h4 class="text-white font-bold text-lg mt-1 truncate">${c.assunto}</h4>
+                    <p class="text-slate-400 text-sm mt-3 line-clamp-2">${c.descricao}</p>
+                    
+                    <div class="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                ${c.nome.charAt(0)}
+                            </div>
+                            <span class="text-xs text-slate-500 font-medium">${c.nome}</span>
+                        </div>
+                        <span class="text-[10px] font-medium text-slate-600">${new Date(c.data).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'Aberto': return 'bg-emerald-500/10 text-emerald-500';
+                case 'Em Atendimento': return 'bg-blue-500/10 text-blue-500';
+                case 'Concluído': return 'bg-slate-500/10 text-slate-400';
+                default: return 'bg-white/5 text-slate-300';
+            }
+        }
+
+        function openModal(id) {
+            const c = chamados.find(ch => ch.id === id);
+            if (!c) return;
+
+            currentChamadoId = id;
+            document.getElementById('modalId').textContent = c.protocolo ? `Protocolo: ${c.protocolo}` : `#${c.id}`;
+            document.getElementById('modalAssunto').textContent = c.assunto;
+            document.getElementById('modalData').textContent = new Date(c.data).toLocaleString();
+            document.getElementById('modalNome').textContent = c.nome;
+            document.getElementById('modalCpf').textContent = c.cpf;
+            document.getElementById('modalEmail').textContent = c.email;
+            document.getElementById('modalTelefone').textContent = c.telefone;
+            document.getElementById('modalOab').textContent = c.numero || 'Não informado';
+            document.getElementById('modalDescricao').textContent = c.descricao;
+            document.getElementById('updateStatus').value = c.status;
+            document.getElementById('updateObservacao').value = c.observacao || '';
+
+            // Imagens
+            const imgSection = document.getElementById('modalImagensSection');
+            const imgContainer = document.getElementById('modalImagens');
+            if (c.imagens && c.imagens.length > 0) {
+                imgSection.classList.remove('hidden');
+                imgContainer.innerHTML = c.imagens.map(url => `
+                    <a href="${url}" target="_blank" class="w-24 h-24 rounded-lg overflow-hidden border border-white/10 hover:border-[#8D3046] transition-colors">
+                        <img src="${url}" class="w-full h-full object-cover">
+                    </a>
+                `).join('');
+            } else {
+                imgSection.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => content.classList.remove('translate-x-full'), 10);
+            document.body.classList.add('modal-active');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modalContent');
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-active');
+            }, 300);
+        }
+
+        async function saveChanges() {
+            const btn = document.getElementById('btnSave');
+            const status = document.getElementById('updateStatus').value;
+            const observacao = document.getElementById('updateObservacao').value;
+
+            btn.disabled = true;
+            btn.innerHTML = 'Salvando...';
+
+            try {
+                const response = await fetch(`/api/chamados/${currentChamadoId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status, observacao })
+                });
+
+                if (response.ok) {
+                    await loadChamados();
+                    closeModal();
+                }
+            } catch (err) {
+                alert('Erro ao salvar alterações');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Salvar Alterações';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('agente_token');
+            window.location.href = '/login.html';
+        }
+
+        // Carregar dados ao entrar
+        loadChamados();
+    </script>
+</body>
+</html>
