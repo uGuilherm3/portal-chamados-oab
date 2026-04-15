@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abertura de Chamados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Força o fundo a permanecer escuro mesmo com preenchimento automático */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #1e1e1e inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        /* Corrigindo a cor do select e placeholder no estilo dark mode */
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; outline: none; border: none; box-shadow: none; }
+        select:focus { outline: none; box-shadow: none; }
+        select:invalid { color: #64748b; }
+        option { background-color: #1e1e1e; color: #f8fafc; }
+        input, textarea { outline: none !important; box-shadow: none !important; }
+        /* Scrollbar customizada para combinar com o fundo escuro */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #131313; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#131313] min-h-screen selection:bg-[#8D3046]/40 font-sans text-slate-200 overflow-x-hidden">
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+        
+        <div class="relative hidden lg:flex items-center justify-center overflow-hidden h-full">
+            <div class="absolute inset-0 z-10 p-12 lg:p-24 flex items-center justify-center" style="background: linear-gradient(to bottom right, #8D3046, #254E70)">
+                <div class="absolute top-0 left-0 w-96 h-96 bg-white/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+                <div class="w-full max-w-lg space-y-12 relative z-20">
+                    <div class="w-full h-px bg-white/20"></div>
+                    <div>
+                        <h2 class="text-4xl lg:text-5xl font-black tracking-tighter text-white leading-tight">
+                            Portal de<br>Atendimento.
+                        </h2>
+                        <p class="text-white/80 text-base mt-6 leading-relaxed font-medium">
+                            Faça sua solicitação de suporte de forma rápida. A equipe de tecnologia da OAB cuidará do resto.
+                        </p>
+                    </div>
+                    <div class="w-full h-px bg-white/20 pt-10"></div>
+                    <div class="text-left">
+                        <p class="text-[9px] text-white/60 font-bold uppercase tracking-[0.4em]">
+                            © 2026 TI OAB CEARÁ
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative p-10 md:p-16 lg:p-24 flex flex-col justify-center items-center bg-[#131313]">
+
+            <div class="w-full max-w-2xl mx-auto">
+                
+                <div class="mb-14 text-center">
+                    <h2 class="text-white text-4xl md:text-5xl font-bold tracking-tight">
+                        Abrir Chamado
+                    </h2>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-4">
+                        Portal de Atendimento Técnico
+                    </p>
+                </div>
+
+                <div id="boxErro" class="hidden items-center gap-2.5 p-4 bg-red-500/10 text-red-400 text-xs font-semibold mb-8 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    <span id="textoErro"></span>
+                </div>
+
+                <div id="boxSucesso" class="hidden items-center gap-2.5 p-4 bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-8 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    <span id="textoSucesso"></span>
+                </div>
+
+                <form id="chamadoForm" class="relative">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Seu Nome *</label>
+                            <input type="text" id="nome" required placeholder="Nome completo" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">CPF *</label>
+                            <input type="text" id="cpf" required placeholder="000.000.000-00" maxlength="14" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">E-mail *</label>
+                            <input type="email" id="email" required placeholder="email@exemplo.com" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Telefone *</label>
+                            <input type="text" id="telefone" required placeholder="(00) 00000-0000" maxlength="15" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Número da OAB</label>
+                            <input type="text" id="numero" placeholder="00000" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Assunto *</label>
+                            <select id="assunto" required class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white focus:outline-none focus:ring-0 border-none transition-all cursor-pointer">
+                                <option value="" disabled selected class="text-slate-500">Selecione uma opção...</option>
+                                <option value="INSS/GERID">INSS/GERID</option>
+                                <option value="CADASTRO SAP">CADASTRO SAP</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Descrição do Problema *</label>
+                            <textarea id="descricao" rows="4" required placeholder="Descreva sua solicitação com detalhes..." class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 w-full">
+                        <button type="submit" id="btnSubmit" class="w-full bg-white text-black py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none outline-none focus:outline-none shadow-none">
+                            Enviar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Máscara de CPF
+        document.getElementById('cpf').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            e.target.value = value;
+        });
+
+        // Máscara Inteligente de Telefone
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, ''); 
+            if (v.length > 11) v = v.slice(0, 11); 
+            
+            if (v.length <= 2) {
+                e.target.value = v;
+            } else if (v.length <= 6) { 
+                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2);
+            } else if (v.length <= 10) { 
+                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,6) + '-' + v.slice(6);
+            } else { 
+                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+            }
+        });
+
+        // Validador matemático de CPF
+        function validaCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g, '');
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+            let soma = 0; let resto;
+            for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+            resto = (soma * 10) % 11;
+            if ((resto === 10) || (resto === 11)) resto = 0;
+            if (resto !== parseInt(cpf.substring(9, 10))) return false;
+            soma = 0;
+            for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+            resto = (soma * 10) % 11;
+            if ((resto === 10) || (resto === 11)) resto = 0;
+            if (resto !== parseInt(cpf.substring(10, 11))) return false;
+            return true;
+        }
+
+        const boxErro = document.getElementById('boxErro');
+        const boxSucesso = document.getElementById('boxSucesso');
+        const textoErro = document.getElementById('textoErro');
+        const textoSucesso = document.getElementById('textoSucesso');
+
+        function showError(msg) {
+            boxSucesso.classList.add('hidden');
+            boxSucesso.classList.remove('flex');
+            textoErro.textContent = msg;
+            boxErro.classList.remove('hidden');
+            boxErro.classList.add('flex');
+        }
+
+        function showSuccess(msg) {
+            boxErro.classList.add('hidden');
+            boxErro.classList.remove('flex');
+            textoSucesso.textContent = msg;
+            boxSucesso.classList.remove('hidden');
+            boxSucesso.classList.add('flex');
+        }
+
+        document.getElementById('chamadoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnSubmit = document.getElementById('btnSubmit');
+            const cpfValue = document.getElementById('cpf').value;
+
+            boxErro.classList.add('hidden');
+            boxErro.classList.remove('flex');
+            boxSucesso.classList.add('hidden');
+            boxSucesso.classList.remove('flex');
+
+            if (!validaCPF(cpfValue)) {
+                showError('Por favor, insira um CPF válido.');
+                return;
+            }
+
+            btnSubmit.innerHTML = '...';
+            btnSubmit.disabled = true;
+
+            const dados = {
+                nome: document.getElementById('nome').value,
+                cpf: document.getElementById('cpf').value,
+                email: document.getElementById('email').value,
+                telefone: document.getElementById('telefone').value,
+                numero: document.getElementById('numero').value,
+                assunto: document.getElementById('assunto').value,
+                descricao: document.getElementById('descricao').value
+            };
+            try {
+                const response = await fetch('/api/chamados', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Chamado enviado com sucesso!');
+                    document.getElementById('chamadoForm').reset();
+                } else {
+                    showError(result.error || 'Erro ao enviar chamado.');
+                }
+            } catch (error) {
+                showError('Falha na conexão com o servidor.');
+            } finally {
+                btnSubmit.innerHTML = 'Enviar';
+                btnSubmit.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
