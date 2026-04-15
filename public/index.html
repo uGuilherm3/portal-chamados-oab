@@ -57,10 +57,10 @@
 
         <div class="relative p-10 md:p-16 lg:p-24 flex flex-col justify-center items-center bg-[#131313]">
 
-            <div class="w-full max-w-2xl mx-auto">
+            <div class="w-full max-w-2xl mx-auto py-8">
                 
                 <div class="mb-14 text-center">
-                    <h2 class="text-white text-4xl md:text-5xl font-bold tracking-tight">
+                    <h2 class="text-white text-4xl font-bold tracking-tight">
                         Abrir Chamado
                     </h2>
                     <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-4">
@@ -68,47 +68,41 @@
                     </p>
                 </div>
 
-                <div id="boxErro" class="hidden items-center gap-2.5 p-4 bg-red-500/10 text-red-400 text-xs font-semibold mb-8 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                    <span id="textoErro"></span>
+                <div id="boxStatus" class="hidden items-center gap-2.5 p-4 text-xs font-semibold mb-8 rounded-lg">
+                    <span id="textoStatus"></span>
                 </div>
 
-                <div id="boxSucesso" class="hidden items-center gap-2.5 p-4 bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-8 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                    <span id="textoSucesso"></span>
-                </div>
-
-                <form id="chamadoForm" class="relative">
+                <form id="chamadoForm" class="relative" enctype="multipart/form-data">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                         
                         <div class="md:col-span-2">
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Seu Nome *</label>
-                            <input type="text" id="nome" required placeholder="Nome completo" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                            <input type="text" id="nome" name="nome" required placeholder="Nome completo" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">CPF *</label>
-                            <input type="text" id="cpf" required placeholder="000.000.000-00" maxlength="14" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                            <input type="text" id="cpf" name="cpf" required placeholder="000.000.000-00" maxlength="14" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">E-mail *</label>
-                            <input type="email" id="email" required placeholder="email@exemplo.com" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                            <input type="email" id="email" name="email" required placeholder="email@exemplo.com" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Telefone *</label>
-                            <input type="text" id="telefone" required placeholder="(00) 00000-0000" maxlength="15" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                            <input type="text" id="telefone" name="telefone" required placeholder="(00) 00000-0000" maxlength="15" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Número da OAB</label>
-                            <input type="text" id="numero" placeholder="00000" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all">
+                            <input type="text" id="numero" name="numero" placeholder="00000" class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all">
                         </div>
 
                         <div class="md:col-span-2">
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Assunto *</label>
-                            <select id="assunto" required class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white focus:outline-none focus:ring-0 border-none transition-all cursor-pointer">
+                            <select id="assunto" name="assunto" required class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white border-none transition-all cursor-pointer">
                                 <option value="" disabled selected class="text-slate-500">Selecione uma opção...</option>
                                 <option value="INSS/GERID">INSS/GERID</option>
                                 <option value="CADASTRO SAP">CADASTRO SAP</option>
@@ -116,13 +110,20 @@
                         </div>
 
                         <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Anexar Imagens (Máx 4)</label>
+                            <input type="file" id="inputImagens" accept="image/*" multiple class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-white file:text-black hover:file:bg-slate-200 cursor-pointer border-none">
+                            
+                            <div id="previewContainer" class="flex flex-wrap gap-4 mt-4"></div>
+                        </div>
+
+                        <div class="md:col-span-2">
                             <label class="block text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 ml-1">Descrição do Problema *</label>
-                            <textarea id="descricao" rows="4" required placeholder="Descreva sua solicitação com detalhes..." class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-0 border-none transition-all resize-none"></textarea>
+                            <textarea id="descricao" name="descricao" rows="4" required placeholder="Descreva sua solicitação com detalhes..." class="w-full bg-[#1e1e1e] rounded-xl px-4 py-4 text-sm text-white placeholder-slate-600 border-none transition-all resize-none"></textarea>
                         </div>
                     </div>
 
                     <div class="mt-12 w-full">
-                        <button type="submit" id="btnSubmit" class="w-full bg-white text-black py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none outline-none focus:outline-none shadow-none">
+                        <button type="submit" id="btnSubmit" class="w-full bg-white text-black py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-50 border-none shadow-none">
                             Enviar
                         </button>
                     </div>
@@ -132,33 +133,23 @@
     </div>
 
     <script>
-        // Máscara de CPF
+        // Máscaras (Inalteradas)
         document.getElementById('cpf').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length > 11) value = value.slice(0, 11);
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d)/, '$1.$2');
-            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
             e.target.value = value;
         });
 
-        // Máscara Inteligente de Telefone
         document.getElementById('telefone').addEventListener('input', function(e) {
             let v = e.target.value.replace(/\D/g, ''); 
             if (v.length > 11) v = v.slice(0, 11); 
-            
-            if (v.length <= 2) {
-                e.target.value = v;
-            } else if (v.length <= 6) { 
-                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2);
-            } else if (v.length <= 10) { 
-                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,6) + '-' + v.slice(6);
-            } else { 
-                e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
-            }
+            if (v.length <= 2) e.target.value = v;
+            else if (v.length <= 6) e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2);
+            else if (v.length <= 10) e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,6) + '-' + v.slice(6);
+            else e.target.value = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
         });
 
-        // Validador matemático de CPF
         function validaCPF(cpf) {
             cpf = cpf.replace(/[^\d]+/g, '');
             if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -175,25 +166,77 @@
             return true;
         }
 
-        const boxErro = document.getElementById('boxErro');
-        const boxSucesso = document.getElementById('boxSucesso');
-        const textoErro = document.getElementById('textoErro');
-        const textoSucesso = document.getElementById('textoSucesso');
+        // --- SISTEMA DE UPLOAD COM PRÉVIA ---
+        let arquivosSelecionados = [];
+        const maxArquivos = 4;
+        const inputImagens = document.getElementById('inputImagens');
+        const previewContainer = document.getElementById('previewContainer');
 
-        function showError(msg) {
-            boxSucesso.classList.add('hidden');
-            boxSucesso.classList.remove('flex');
-            textoErro.textContent = msg;
-            boxErro.classList.remove('hidden');
-            boxErro.classList.add('flex');
+        inputImagens.addEventListener('change', function(e) {
+            const novosArquivos = Array.from(e.target.files);
+            
+            // Verifica se ultrapassou o limite
+            if (arquivosSelecionados.length + novosArquivos.length > maxArquivos) {
+                alert(`Você só pode anexar no máximo ${maxArquivos} imagens.`);
+                inputImagens.value = ""; // Reseta o input atual
+                return;
+            }
+
+            // Adiciona ao array global
+            arquivosSelecionados = [...arquivosSelecionados, ...novosArquivos];
+            atualizarPrevia();
+            
+            // Reseta o input para permitir selecionar a mesma imagem se o usuário deletar e quiser adicionar de novo
+            inputImagens.value = ""; 
+        });
+
+        function atualizarPrevia() {
+            previewContainer.innerHTML = ""; // Limpa a div
+
+            arquivosSelecionados.forEach((arquivo, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Cria o container da miniatura
+                    const div = document.createElement('div');
+                    div.className = "relative w-20 h-20 rounded-lg overflow-hidden border border-[#8D3046]/30 shadow-lg";
+
+                    // Cria a imagem
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = "w-full h-full object-cover";
+
+                    // Cria o botão de remover (X)
+                    const btnRemover = document.createElement('button');
+                    btnRemover.innerHTML = "×";
+                    btnRemover.className = "absolute top-1 right-1 bg-red-600 text-white w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold hover:bg-red-700 transition-colors";
+                    btnRemover.type = "button"; // Evita submeter o formulário
+                    btnRemover.onclick = () => removerArquivo(index);
+
+                    div.appendChild(img);
+                    div.appendChild(btnRemover);
+                    previewContainer.appendChild(div);
+                };
+                reader.readAsDataURL(arquivo);
+            });
         }
 
-        function showSuccess(msg) {
-            boxErro.classList.add('hidden');
-            boxErro.classList.remove('flex');
-            textoSucesso.textContent = msg;
-            boxSucesso.classList.remove('hidden');
-            boxSucesso.classList.add('flex');
+        function removerArquivo(index) {
+            arquivosSelecionados.splice(index, 1); // Remove da array pelo indice
+            atualizarPrevia(); // Renderiza de novo
+        }
+
+        // --- ENVIO DO FORMULÁRIO ---
+        const boxStatus = document.getElementById('boxStatus');
+        const textoStatus = document.getElementById('textoStatus');
+
+        function mostrarStatus(mensagem, erro = false) {
+            boxStatus.classList.remove('hidden');
+            textoStatus.textContent = mensagem;
+            if (erro) {
+                boxStatus.className = "flex items-center gap-2.5 p-4 text-xs font-semibold mb-8 rounded-lg bg-red-500/10 text-red-400";
+            } else {
+                boxStatus.className = "flex items-center gap-2.5 p-4 text-xs font-semibold mb-8 rounded-lg bg-emerald-500/10 text-emerald-400";
+            }
         }
 
         document.getElementById('chamadoForm').addEventListener('submit', async (e) => {
@@ -202,45 +245,45 @@
             const btnSubmit = document.getElementById('btnSubmit');
             const cpfValue = document.getElementById('cpf').value;
 
-            boxErro.classList.add('hidden');
-            boxErro.classList.remove('flex');
-            boxSucesso.classList.add('hidden');
-            boxSucesso.classList.remove('flex');
+            boxStatus.classList.add('hidden');
 
             if (!validaCPF(cpfValue)) {
-                showError('Por favor, insira um CPF válido.');
+                mostrarStatus('Por favor, insira um CPF válido.', true);
                 return;
             }
 
             btnSubmit.innerHTML = '...';
             btnSubmit.disabled = true;
 
-            const dados = {
-                nome: document.getElementById('nome').value,
-                cpf: document.getElementById('cpf').value,
-                email: document.getElementById('email').value,
-                telefone: document.getElementById('telefone').value,
-                numero: document.getElementById('numero').value,
-                assunto: document.getElementById('assunto').value,
-                descricao: document.getElementById('descricao').value
-            };
+            // Criar o FormData e adicionar os dados manuais + as imagens acumuladas
+            const formData = new FormData(e.target);
+            
+            // Remove o campo original vazio do formulário
+            formData.delete('imagens'); 
+            
+            // Anexa os arquivos que o usuário acumulou na nossa variável JavaScript
+            arquivosSelecionados.forEach((arquivo) => {
+                formData.append('imagens', arquivo);
+            });
+
             try {
                 const response = await fetch('/api/chamados', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
+                    body: formData
                 });
 
                 const result = await response.json();
 
                 if (response.ok) {
-                    showSuccess('Chamado enviado com sucesso!');
-                    document.getElementById('chamadoForm').reset();
+                    mostrarStatus('Chamado enviado com sucesso!', false);
+                    e.target.reset(); // Limpa textos
+                    arquivosSelecionados = []; // Limpa array de imagens
+                    atualizarPrevia(); // Limpa as miniaturas visuais
                 } else {
-                    showError(result.error || 'Erro ao enviar chamado.');
+                    mostrarStatus(result.error || 'Erro ao enviar chamado.', true);
                 }
             } catch (error) {
-                showError('Falha na conexão com o servidor.');
+                mostrarStatus('Falha na conexão com o servidor.', true);
             } finally {
                 btnSubmit.innerHTML = 'Enviar';
                 btnSubmit.disabled = false;
