@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: portal-chamados
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistência do JSON de dados
+      - ./data:/app/data
+      # Persistência das imagens enviadas
+      - ./public/uploads:/app/public/uploads
+    environment:
+      - NODE_ENV=production

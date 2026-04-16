@@ -67,26 +67,36 @@ app.get('/api/chamados', async (req, res) => {
     }
 });
 
-// Endpoint Público de Consulta (Seguro)
+// Endpoint Público de Consulta (Seguro) - Busca por ID, Protocolo ou CPF
 app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const chamados = await fs.readJson(DATA_FILE);
 
-        // Procurar por ID ou Protocolo
-        const chamado = chamados.find(c => c.id === id || c.protocolo === id);
+        // Procurar por ID, Protocolo ou CPF
+        // Filtramos todos para o caso de busca por CPF (que pode ter vários)
+        const resultados = chamados.filter(c => 
+            (c.id && c.id === id) || 
+            (c.protocolo && c.protocolo === id) || 
+            (c.cpf && c.cpf === id) || 
+            (c.cpf && c.cpf.replace(/\D/g, '') === id.replace(/\D/g, '')) // Busca ignorando pontuação
+        );
 
-        if (!chamado) return res.status(404).json({ error: 'Chamado não encontrado' });
+        if (resultados.length === 0) return res.status(404).json({ error: 'Nenhum chamado encontrado.' });
 
-        // Retorna apenas dados não sensíveis
-        res.status(200).json({
+        // Retorna apenas dados não sensíveis de todos os encontrados
+        const simplificados = resultados.map( chamado => ({
             id: chamado.id,
             protocolo: chamado.protocolo || 'Aguardando Atendimento',
             status: chamado.status,
             observacao: chamado.observacao,
             data: chamado.data,
-            assunto: chamado.assunto
-        });
+            assunto: chamado.assunto,
+            nome: chamado.nome,
+            historico: chamado.historico || [{ status: 'Aberto', data: chamado.data, observacao: 'Chamado registrado no sistema.' }]
+        }));
+
+        res.status(200).json(simplificados);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao consultar chamado' });
     }
@@ -96,7 +106,13 @@ app.get('/api/public/chamados/:id', async (req, res) => {
 app.patch('/api/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, observacao } = req.body;
+        let { status, observacao } = req.body;
+
+        // Corrigir bug de enviar "--" infinitamente ou observações vazias
+        if (observacao === '--' || (observacao && observacao.trim() === '')) {
+            observacao = undefined;
+        }
+
         let chamados = await fs.readJson(DATA_FILE);
 
         const index = chamados.findIndex(c => c.id === id);
@@ -119,7 +135,21 @@ app.patch('/api/chamados/:id', async (req, res) => {
 
         if (observacao !== undefined) chamados[index].observacao = observacao;
 
+        // Registrar no histórico se o status mudou ou se houve nova observação para o histórico
+        if (!chamados[index].historico) {
+            chamados[index].historico = [{ status: 'Aberto', data: chamadoAntigo.data, observacao: 'Chamado registrado no sistema.' }];
+        }
+
+        if (statusMudou || (observacao !== undefined && observacao !== chamadoAntigo.observacao)) {
+            chamados[index].historico.push({
+                status: chamados[index].status,
+                data: new Date().toISOString(),
+                observacao: observacao || (statusMudou ? 'Status atualizado pelo técnico.' : 'Observação atualizada.')
+            });
+        }
+
         await fs.writeJson(DATA_FILE, chamados);
+
         const chamadoAtualizado = chamados[index];
 
         // Enviar E-mail de Notificação ao Solicitante
@@ -170,7 +200,14 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             descricao,
             status: 'Aberto',
             observacao: '',
-            imagens: arquivos.map(f => `/uploads/${f.filename}`)
+            imagens: arquivos.map(f => `/uploads/${f.filename}`),
+            historico: [
+                {
+                    status: 'Aberto',
+                    data: new Date().toISOString(),
+                    observacao: 'Chamado registrado no sistema com sucesso.'
+                }
+            ]
         };
 
         // Salvar no JSON

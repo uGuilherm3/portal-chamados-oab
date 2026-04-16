@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel do Agente - Helpdesk OAB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Verificação de autenticação
@@ -16,52 +19,110 @@
         ::-webkit-scrollbar-track { background: #131313; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .modal-active { overflow: hidden; }
-    </style>
-</head>
-<body class="bg-[#131313] min-h-screen font-sans text-slate-200">
+        /* Remove contornos padrões */
+        input, select, button { outline: none !important; box-shadow: none !important; border: none !important; }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        option { background-color: #1e1e1e; color: #f8fafc; }
 
-    <nav class="border-b border-white/5 bg-[#131313]/80 backdrop-blur-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 text-[13px] font-black flex items-center justify-center bg-gradient-to-br from-[#8D3046] to-[#254E70] rounded-lg">OAB</div>
-                <div>
-                    <h1 class="text-white font-bold tracking-tight">Helpdesk <span class="text-[#8D3046]">Agente</span></h1>
-                    <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Painel de Gestão</p>
+        /* Estilo para modo Embed */
+        body.is-embedded aside { display: none !important; }
+        body.is-embedded main { padding-top: 2rem !important; }
+    </style>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('embed') === 'true') {
+            document.documentElement.classList.add('is-embedded');
+            window.addEventListener('DOMContentLoaded', () => {
+                document.body.classList.add('is-embedded');
+            });
+        }
+    </script>
+</head>
+<body class="bg-[#131313] min-h-screen text-slate-200 font-inter flex overflow-hidden">
+
+    <aside class="w-64 bg-[#1e1e1e] flex-shrink-0 flex flex-col justify-between hidden md:flex h-screen">
+        <div>
+            <div class="h-24 flex items-center px-8 mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 text-[13px] font-black flex items-center justify-center bg-gradient-to-br from-[#8D3046] to-[#254E70] rounded-lg text-white">OAB</div>
+                    <div>
+                        <h1 class="text-white font-bold tracking-tight">Helpdesk</h1>
+                        <p class="text-[9px] text-[#8D3046] font-bold uppercase tracking-widest">Painel do Agente</p>
+                    </div>
                 </div>
             </div>
-            <button onclick="logout()" class="text-[10px] font-bold uppercase text-slate-400 hover:text-white transition-colors tracking-widest bg-white/5 px-4 py-2 rounded-lg">
-                Sair
+
+            <nav class="px-4 space-y-2">
+                <a href="#" class="flex items-center gap-4 px-4 py-3 bg-[#131313] text-white rounded-xl font-medium text-sm transition-colors">
+                    <svg class="w-5 h-5 text-[#8D3046]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    Painel Geral
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-4">
+            <button onclick="logout()" class="w-full flex items-center gap-4 px-4 py-3 text-slate-400 hover:bg-[#131313] hover:text-white rounded-xl font-medium text-sm transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Sair do Sistema
             </button>
         </div>
-    </nav>
+    </aside>
 
-    <main class="max-w-7xl mx-auto p-6 lg:p-10">
+    <main class="flex-1 h-screen overflow-y-auto p-6 lg:p-10">
         
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
                 <h2 class="text-3xl font-bold text-white tracking-tight">Chamados Recentes</h2>
                 <p class="text-slate-500 text-sm mt-1">Gerencie as solicitações de suporte técnico.</p>
             </div>
             <div class="flex items-center gap-3">
-                <div class="bg-[#1e1e1e] rounded-xl px-4 py-2 border border-white/5 text-xs font-medium text-slate-400">
-                    Total: <span id="totalCount" class="text-white">0</span>
+                <div class="bg-[#1e1e1e] rounded-xl px-4 py-3 text-xs font-medium text-slate-400">
+                    Total Filtrado: <span id="totalCount" class="text-white font-bold text-sm ml-1">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-4 mb-8 bg-[#1e1e1e] p-2 rounded-2xl">
+            
+            <div class="flex-1 flex items-center bg-[#131313] rounded-xl px-4 py-1">
+                <svg class="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="searchInput" placeholder="Pesquisar por assunto, solicitante ou protocolo..." class="w-full bg-transparent py-3 text-sm text-white placeholder-slate-600">
+            </div>
+
+            <div class="flex gap-2">
+                <div class="relative w-48">
+                    <select id="statusFilter" class="w-full bg-[#131313] text-sm text-white rounded-xl px-4 py-4 cursor-pointer">
+                        <option value="Todos">Todos os Status</option>
+                        <option value="Aberto">Aberto</option>
+                        <option value="Em Atendimento">Em Atendimento</option>
+                        <option value="Concluído">Concluído</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                    <svg class="w-4 h-4 text-slate-500 absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+
+                <div class="flex bg-[#131313] rounded-xl p-1">
+                    <button id="btnGrid" class="px-4 py-2 rounded-lg text-slate-500 transition-colors flex items-center justify-center" title="Visualização em Grade">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    </button>
+                    <button id="btnList" class="px-4 py-2 rounded-lg text-slate-500 transition-colors flex items-center justify-center" title="Visualização em Lista">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
                 </div>
             </div>
         </div>
 
         <div id="chamadosList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Chamados serão inseridos aqui -->
             <div class="col-span-full py-20 text-center text-slate-600 animate-pulse">
                 Carregando chamados...
             </div>
         </div>
     </main>
 
-    <!-- Modal de Detalhes -->
     <div id="modal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
-        <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-[#1e1e1e] shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-full" id="modalContent">
-            <div class="p-8 border-b border-white/5 flex items-center justify-between">
+        <div class="absolute inset-y-0 right-0 w-full max-w-2xl bg-[#1e1e1e] flex flex-col transform transition-transform duration-300 translate-x-full" id="modalContent">
+            <div class="p-8 bg-[#1a1a1a] flex items-center justify-between">
                 <div>
                     <span id="modalId" class="text-[10px] font-bold text-[#8D3046] uppercase tracking-[0.2em]">#0000000000</span>
                     <h3 id="modalAssunto" class="text-2xl font-bold text-white mt-1">Assunto do Chamado</h3>
@@ -70,9 +131,8 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 space-y-8">
-                <!-- Status e Data -->
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-[#131313] p-4 rounded-xl border border-white/5">
+                    <div class="bg-[#131313] p-4 rounded-xl">
                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status Atual</p>
                         <select id="updateStatus" class="bg-transparent text-white font-bold text-sm outline-none border-none w-full cursor-pointer">
                             <option value="Aberto">Aberto</option>
@@ -81,13 +141,12 @@
                             <option value="Cancelado">Cancelado</option>
                         </select>
                     </div>
-                    <div class="bg-[#131313] p-4 rounded-xl border border-white/5">
+                    <div class="bg-[#131313] p-4 rounded-xl">
                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Aberto em</p>
                         <span id="modalData" class="text-white font-bold text-sm">--/--/--</span>
                     </div>
                 </div>
 
-                <!-- Solicitante -->
                 <div class="space-y-4">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informações do Solicitante</h4>
                     <div class="grid grid-cols-2 gap-y-4 text-sm">
@@ -114,26 +173,23 @@
                     </div>
                 </div>
 
-                <!-- Descrição -->
                 <div class="space-y-4">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Descrição do Problema</h4>
-                    <div id="modalDescricao" class="bg-[#131313] p-6 rounded-xl text-sm leading-relaxed text-slate-300 border border-white/5 whitespace-pre-line"></div>
+                    <div id="modalDescricao" class="bg-[#131313] p-6 rounded-xl text-sm leading-relaxed text-slate-300 whitespace-pre-line"></div>
                 </div>
 
-                <!-- Imagens -->
                 <div id="modalImagensSection" class="space-y-4 hidden">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Anexos</h4>
                     <div id="modalImagens" class="flex flex-wrap gap-4"></div>
                 </div>
 
-                <!-- Observação Interna -->
                 <div class="space-y-4">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Observação Interna (Agente)</h4>
-                    <textarea id="updateObservacao" rows="4" class="w-full bg-[#131313] rounded-xl p-4 text-sm text-white placeholder-slate-700 border border-white/5 focus:border-[#8D3046]/50 transition-colors outline-none resize-none" placeholder="Adicione notas sobre este atendimento..."></textarea>
+                    <textarea id="updateObservacao" rows="4" class="w-full bg-[#131313] rounded-xl p-4 text-sm text-white placeholder-slate-700 focus:bg-[#252525] transition-colors outline-none resize-none" placeholder="Adicione notas sobre este atendimento..."></textarea>
                 </div>
             </div>
 
-            <div class="p-8 border-t border-white/5 bg-[#1e1e1e]">
+            <div class="p-8 bg-[#1a1a1a]">
                 <button onclick="saveChanges()" id="btnSave" class="w-full bg-[#8D3046] text-white py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#a13b54] transition-colors flex items-center justify-center gap-2">
                     Salvar Alterações
                 </button>
@@ -144,6 +200,57 @@
     <script>
         let chamados = [];
         let currentChamadoId = null;
+        
+        // Recupera a preferência do usuário ou usa 'list' como padrão
+        let currentView = localStorage.getItem('viewPreference') || 'list'; 
+        let searchTerm = '';
+        let statusFilter = 'Todos';
+
+        const btnGrid = document.getElementById('btnGrid');
+        const btnList = document.getElementById('btnList');
+        const container = document.getElementById('chamadosList');
+
+        // Função para atualizar os estilos dos botões de visualização
+        function updateViewButtons() {
+            if (currentView === 'grid') {
+                btnGrid.classList.add('bg-[#252525]', 'text-white');
+                btnGrid.classList.remove('text-slate-500');
+                btnList.classList.remove('bg-[#252525]', 'text-white');
+                btnList.classList.add('text-slate-500');
+                container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+            } else {
+                btnList.classList.add('bg-[#252525]', 'text-white');
+                btnList.classList.remove('text-slate-500');
+                btnGrid.classList.remove('bg-[#252525]', 'text-white');
+                btnGrid.classList.add('text-slate-500');
+                container.className = "flex flex-col gap-3";
+            }
+        }
+
+        // Listeners das Ferramentas
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchTerm = e.target.value.toLowerCase();
+            renderChamados();
+        });
+
+        document.getElementById('statusFilter').addEventListener('change', (e) => {
+            statusFilter = e.target.value;
+            renderChamados();
+        });
+
+        btnGrid.addEventListener('click', () => {
+            currentView = 'grid';
+            localStorage.setItem('viewPreference', 'grid');
+            updateViewButtons();
+            renderChamados();
+        });
+
+        btnList.addEventListener('click', () => {
+            currentView = 'list';
+            localStorage.setItem('viewPreference', 'list');
+            updateViewButtons();
+            renderChamados();
+        });
 
         async function loadChamados() {
             try {
@@ -151,44 +258,85 @@
                 chamados = await response.json();
                 renderChamados();
             } catch (err) {
-                console.error('Erro ao carregar chamados');
+                console.error('Erro ao carregar chamados', err);
             }
         }
 
-        function renderChamados() {
-            const list = document.getElementById('chamadosList');
-            const total = document.getElementById('totalCount');
-            total.textContent = chamados.length;
+        function getFilteredChamados() {
+            return chamados.filter(c => {
+                const matchStatus = statusFilter === 'Todos' || c.status === statusFilter;
+                const matchSearch = 
+                    (c.assunto && c.assunto.toLowerCase().includes(searchTerm)) ||
+                    (c.nome && c.nome.toLowerCase().includes(searchTerm)) ||
+                    (c.protocolo && c.protocolo.toLowerCase().includes(searchTerm));
+                return matchStatus && matchSearch;
+            });
+        }
 
-            if (chamados.length === 0) {
-                list.innerHTML = '<div class="col-span-full py-20 text-center text-slate-600">Nenhum chamado registrado.</div>';
+        function renderChamados() {
+            const filtered = getFilteredChamados();
+            document.getElementById('totalCount').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-600">Nenhum chamado encontrado.</div>';
                 return;
             }
 
-            list.innerHTML = chamados.map(c => `
-                <div onclick="openModal('${c.id}')" class="group bg-[#1e1e1e] border border-white/5 hover:border-[#8D3046]/30 p-6 rounded-2xl transition-all cursor-pointer relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 flex flex-col items-end gap-2">
-                        <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${getStatusClass(c.status)}">
-                            ${c.status}
-                        </span>
-                        ${c.protocolo ? `<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 px-1.5 py-0.5 rounded">Prot: ${c.protocolo}</span>` : ''}
-                    </div>
-                    
-                    <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">#${c.id}</span>
-                    <h4 class="text-white font-bold text-lg mt-1 truncate">${c.assunto}</h4>
-                    <p class="text-slate-400 text-sm mt-3 line-clamp-2">${c.descricao}</p>
-                    
-                    <div class="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                                ${c.nome.charAt(0)}
-                            </div>
-                            <span class="text-xs text-slate-500 font-medium">${c.nome}</span>
+            if (currentView === 'grid') {
+                container.innerHTML = filtered.map(c => `
+                    <div onclick="openModal('${c.id}')" class="bg-[#1e1e1e] hover:bg-[#252525] p-6 rounded-2xl transition-all cursor-pointer relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 flex flex-col items-end gap-2">
+                            <span class="px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${getStatusClass(c.status)}">
+                                ${c.status}
+                            </span>
                         </div>
-                        <span class="text-[10px] font-medium text-slate-600">${new Date(c.data).toLocaleDateString()}</span>
+                        
+                        <span class="text-[9px] font-bold text-slate-600 uppercase tracking-widest">${c.protocolo ? `PROT: ${c.protocolo}` : `#${c.id}`}</span>
+                        <h4 class="text-white font-bold text-lg mt-1 truncate pr-20">${c.assunto}</h4>
+                        <p class="text-slate-400 text-sm mt-3 line-clamp-2">${c.descricao}</p>
+                        
+                        <div class="mt-6 pt-6 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-[#131313] flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                    ${c.nome.charAt(0).toUpperCase()}
+                                </div>
+                                <span class="text-xs text-slate-500 font-medium">${c.nome}</span>
+                            </div>
+                            <span class="text-[10px] font-medium text-slate-600">${new Date(c.data).toLocaleDateString()}</span>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            } else {
+                // RENDERIZAÇÃO EM LISTA (Tamanhos fixos aplicados na direita para alinhamento perfeito)
+                container.innerHTML = filtered.map(c => `
+                    <div onclick="openModal('${c.id}')" class="bg-[#1e1e1e] hover:bg-[#252525] p-4 rounded-xl transition-all cursor-pointer flex flex-col md:flex-row md:items-center gap-4">
+                        
+                        <div class="flex items-center gap-4 min-w-0 flex-1">
+                            <div class="w-10 h-10 rounded-full bg-[#131313] flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-400">
+                                ${c.nome.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-white font-bold text-sm truncate">${c.assunto}</h4>
+                                <div class="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                                    <span class="font-medium text-slate-400 truncate max-w-[150px] sm:max-w-[200px]">${c.nome}</span>
+                                    <span>•</span>
+                                    <span class="text-[9px] uppercase tracking-widest">${c.protocolo ? c.protocolo : `#${c.id}`}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-6 flex-shrink-0 ml-14 md:ml-0">
+                            <span class="w-20 text-right text-[10px] font-medium text-slate-500">${new Date(c.data).toLocaleDateString()}</span>
+                            
+                            <div class="w-32 flex justify-end">
+                                <span class="w-full text-center px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${getStatusClass(c.status)}">
+                                    ${c.status}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
         function getStatusClass(status) {
@@ -196,15 +344,16 @@
                 case 'Aberto': return 'bg-emerald-500/10 text-emerald-500';
                 case 'Em Atendimento': return 'bg-blue-500/10 text-blue-500';
                 case 'Concluído': return 'bg-slate-500/10 text-slate-400';
-                default: return 'bg-white/5 text-slate-300';
+                case 'Cancelado': return 'bg-red-500/10 text-red-500';
+                default: return 'bg-[#131313] text-slate-300';
             }
         }
 
         function openModal(id) {
-            const c = chamados.find(ch => ch.id === id);
+            const c = chamados.find(ch => ch.id === id || ch.id === parseInt(id));
             if (!c) return;
 
-            currentChamadoId = id;
+            currentChamadoId = c.id;
             document.getElementById('modalId').textContent = c.protocolo ? `Protocolo: ${c.protocolo}` : `#${c.id}`;
             document.getElementById('modalAssunto').textContent = c.assunto;
             document.getElementById('modalData').textContent = new Date(c.data).toLocaleString();
@@ -223,7 +372,7 @@
             if (c.imagens && c.imagens.length > 0) {
                 imgSection.classList.remove('hidden');
                 imgContainer.innerHTML = c.imagens.map(url => `
-                    <a href="${url}" target="_blank" class="w-24 h-24 rounded-lg overflow-hidden border border-white/10 hover:border-[#8D3046] transition-colors">
+                    <a href="${url}" target="_blank" class="w-20 h-20 rounded-lg overflow-hidden border-none hover:opacity-80 transition-opacity">
                         <img src="${url}" class="w-full h-full object-cover">
                     </a>
                 `).join('');
@@ -280,7 +429,8 @@
             window.location.href = '/login.html';
         }
 
-        // Carregar dados ao entrar
+        // INICIALIZAÇÃO
+        updateViewButtons(); // Aplica a visualização salva no localStorage antes de renderizar
         loadChamados();
     </script>
 </body>
