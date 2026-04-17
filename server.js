@@ -6,13 +6,16 @@ const path = require('path');
 const fs = require('fs-extra');
 
 const app = express();
-const DATA_FILE = path.join(__dirname, 'data', 'chamados.json');
+
+// Definição de caminhos
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'chamados.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
-// Garantir que os diretórios existam
+// Garantir que os diretórios e arquivos existam
 fs.ensureDirSync(UPLOADS_DIR);
-fs.ensureFileSync(DATA_FILE);
-if (!fs.readFileSync(DATA_FILE, 'utf8')) {
+fs.ensureDirSync(DATA_DIR);
+if (!fs.existsSync(DATA_FILE)) {
     fs.writeJsonSync(DATA_FILE, []);
 }
 
@@ -20,7 +23,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configurando o Multer para salvar no disco
+// Configuração do Multer para persistência em disco
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, UPLOADS_DIR);
@@ -42,12 +45,12 @@ const transporter = nodemailer.createTransport({
     secure: false,
     auth: {
         user: 'smtp_glpi@oabce.org.br',
-        pass: '4h}E*Ub&amp;CEcpXa'
+        pass: '4h}E*Ub&CEcpXa'
     },
     tls: { rejectUnauthorized: false }
 });
 
-// Login Simples
+// Login Simples para administração
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
     if (usuario === 'adm' && senha === '1234') {
@@ -57,43 +60,42 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Listar Chamados (Para o Painel do Agente)
+// Listar Chamados (GET)
 app.get('/api/chamados', async (req, res) => {
     try {
         const chamados = await fs.readJson(DATA_FILE);
-        res.status(200).json(chamados);
+        // Retorna ordenado por data (mais recentes primeiro)
+        res.status(200).json(chamados.sort((a,b) => new Date(b.data) - new Date(a.data)));
     } catch (error) {
         res.status(500).json({ error: 'Erro ao ler chamados' });
     }
 });
 
-// Endpoint Público de Consulta (Seguro) - Busca por ID, Protocolo ou CPF
+// Consulta Pública por ID, Protocolo ou CPF
 app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const chamados = await fs.readJson(DATA_FILE);
+        const searchId = id.replace(/\D/g, ''); // Para busca por CPF sem formatação
 
-        // Procurar por ID, Protocolo ou CPF
-        // Filtramos todos para o caso de busca por CPF (que pode ter vários)
         const resultados = chamados.filter(c => 
-            (c.id && c.id === id) || 
-            (c.protocolo && c.protocolo === id) || 
-            (c.cpf && c.cpf === id) || 
-            (c.cpf && c.cpf.replace(/\D/g, '') === id.replace(/\D/g, '')) // Busca ignorando pontuação
+            c.id === id || 
+            c.protocolo === id || 
+            (c.cpf && c.cpf.replace(/\D/g, '') === searchId)
         );
 
         if (resultados.length === 0) return res.status(404).json({ error: 'Nenhum chamado encontrado.' });
 
-        // Retorna apenas dados não sensíveis de todos os encontrados
+        // Retorna apenas dados públicos
         const simplificados = resultados.map( chamado => ({
             id: chamado.id,
-            protocolo: chamado.protocolo || 'Aguardando Atendimento',
+            protocolo: chamado.protocolo || 'Pendente',
             status: chamado.status,
             observacao: chamado.observacao,
             data: chamado.data,
             assunto: chamado.assunto,
             nome: chamado.nome,
-            historico: chamado.historico || [{ status: 'Aberto', data: chamado.data, observacao: 'Chamado registrado no sistema.' }]
+            historico: chamado.historico || []
         }));
 
         res.status(200).json(simplificados);
@@ -102,95 +104,17 @@ app.get('/api/public/chamados/:id', async (req, res) => {
     }
 });
 
-// Atualizar Status/Observação do Chamado
-app.patch('/api/chamados/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        let { status, observacao } = req.body;
-
-        // Corrigir bug de enviar "--" infinitamente ou observações vazias
-        if (observacao === '--' || (observacao && observacao.trim() === '')) {
-            observacao = undefined;
-        }
-
-        let chamados = await fs.readJson(DATA_FILE);
-
-        const index = chamados.findIndex(c => c.id === id);
-        if (index === -1) return res.status(404).json({ error: 'Chamado não encontrado' });
-
-        const chamadoAntigo = { ...chamados[index] };
-        let statusMudou = false;
-
-        if (status && status !== chamadoAntigo.status) {
-            chamados[index].status = status;
-            statusMudou = true;
-
-            // Gerar protocolo se estiver em "Em Atendimento" pela primeira vez
-            if (status === 'Em Atendimento' && !chamados[index].protocolo) {
-                const ano = new Date().getFullYear();
-                const random = Math.floor(1000 + Math.random() * 9000); // 4 dígitos aleatórios
-                chamados[index].protocolo = `${ano}-CH${random}`;
-            }
-        }
-
-        if (observacao !== undefined) chamados[index].observacao = observacao;
-
-        // Registrar no histórico se o status mudou ou se houve nova observação para o histórico
-        if (!chamados[index].historico) {
-            chamados[index].historico = [{ status: 'Aberto', data: chamadoAntigo.data, observacao: 'Chamado registrado no sistema.' }];
-        }
-
-        if (statusMudou || (observacao !== undefined && observacao !== chamadoAntigo.observacao)) {
-            chamados[index].historico.push({
-                status: chamados[index].status,
-                data: new Date().toISOString(),
-                observacao: observacao || (statusMudou ? 'Status atualizado pelo técnico.' : 'Observação atualizada.')
-            });
-        }
-
-        await fs.writeJson(DATA_FILE, chamados);
-
-        const chamadoAtualizado = chamados[index];
-
-        // Enviar E-mail de Notificação ao Solicitante
-        const mailOptions = {
-            from: 'smtp_glpi@oabce.org.br',
-            to: chamadoAtualizado.email,
-            subject: `Atualização de Chamado: ${chamadoAtualizado.status} - Protocolo ${chamadoAtualizado.protocolo || chamadoAtualizado.id}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; color: #333; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-                    <h2 style="color: #8D3046;">Olá, ${chamadoAtualizado.nome}</h2>
-                    <p>O status do seu chamado <strong>#${chamadoAtualizado.assunto}</strong> foi atualizado.</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p><strong>Novo Status:</strong> <span style="color: #254E70;">${chamadoAtualizado.status}</span></p>
-                    <p><strong>Protocolo:</strong> ${chamadoAtualizado.protocolo || 'Em processamento'}</p>
-                    <p><strong>Resposta do Técnico:</strong></p>
-                    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-style: italic;">
-                        ${chamadoAtualizado.observacao || 'Sem observações adicionais.'}
-                    </div>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #666;">Você pode consultar o status em tempo real no nosso portal utilizando seu protocolo.</p>
-                </div>
-            `
-        };
-
-        transporter.sendMail(mailOptions).catch(err => console.error("Erro ao enviar e-mail de atualização:", err));
-
-        res.status(200).json(chamadoAtualizado);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao atualizar chamado' });
-    }
-});
-
+// Criar Chamado (POST)
 app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
     try {
         const { nome, cpf, email, telefone, numero, assunto, descricao } = req.body;
         const arquivos = req.files || [];
+        const id = Date.now().toString();
+        const dataAtual = new Date().toISOString();
 
-        // Criar objeto do chamado para salvar no JSON
         const novoChamado = {
-            id: Date.now().toString(),
-            data: new Date().toISOString(),
+            id,
+            data: dataAtual,
             nome,
             cpf,
             email,
@@ -201,55 +125,116 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             status: 'Aberto',
             observacao: '',
             imagens: arquivos.map(f => `/uploads/${f.filename}`),
+            protocolo: null, // Será gerado no primeiro atendimento
             historico: [
                 {
                     status: 'Aberto',
-                    data: new Date().toISOString(),
+                    data: dataAtual,
                     observacao: 'Chamado registrado no sistema com sucesso.'
                 }
             ]
         };
 
-        // Salvar no JSON
         const chamados = await fs.readJson(DATA_FILE);
-        chamados.unshift(novoChamado); // Adiciona no início
+        chamados.push(novoChamado);
         await fs.writeJson(DATA_FILE, chamados);
 
-        // Enviar E-mail
+        // Enviar E-mail de confirmação de abertura
         const anexosFormatados = arquivos.map(file => ({
             filename: file.originalname,
-            path: file.path // Agora usamos o path do arquivo no disco
+            path: file.path
         }));
 
         const mailOptions = {
             from: 'smtp_glpi@oabce.org.br',
             replyTo: email,
-            to: 'chamado@oabce.org.br', // Alterado conforme conversas anteriores
+            to: 'umadruginha@gmail.com',
             subject: `Novo Chamado: ${assunto} - ${nome}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; color: #333;">
-                    <h2 style="color: #8D3046;">Novo Chamado Aberto (#${novoChamado.id})</h2>
+                    <h2 style="color: #8D3046;">Novo Chamado Recebido (#${id})</h2>
+                    <p><strong>Solicitante:</strong> ${nome}</p>
                     <p><strong>Assunto:</strong> ${assunto}</p>
                     <hr>
-                    <p><strong>Solicitante:</strong> ${nome}</p>
-                    <p><strong>CPF:</strong> ${cpf}</p>
-                    <p><strong>E-mail:</strong> ${email}</p>
-                    <p><strong>Telefone:</strong> ${telefone}</p>
-                    <p><strong>Nº OAB:</strong> ${numero || 'Não informado'}</p>
+                    <p>${descricao.replace(/\n/g, '<br>')}</p>
                     <hr>
-                    <h3>Descrição:</h3>
-                    <p style="background: #f4f4f4; padding: 15px; border-radius: 5px;">${descricao.replace(/\n/g, '<br>')}</p>
+                    <p style="font-size: 12px; color: #666;">Acesse o portal para acompanhar o status com seu CPF ou ID: ${id}</p>
                 </div>
             `,
-            attachments: anexosFormatados
+            attachments: anexosFormatados 
         };
 
-        await transporter.sendMail(mailOptions);
-        res.status(200).json({ message: 'Chamado enviado e registrado!', id: novoChamado.id });
+        await transporter.sendMail(mailOptions).catch(e => console.error("Erro e-mail:", e));
+        
+        res.status(200).json({ message: 'Chamado aberto com sucesso!', id });
 
     } catch (error) {
-        console.error("ERRO AO PROCESSAR CHAMADO:", error);
+        console.error("ERRO POST:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Atualizar Chamado (PATCH)
+app.patch('/api/chamados/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let { status, observacao } = req.body;
+
+        if (observacao === '--') observacao = undefined;
+
+        let chamados = await fs.readJson(DATA_FILE);
+        const index = chamados.findIndex(c => c.id === id);
+
+        if (index === -1) return res.status(404).json({ error: 'Chamado não encontrado' });
+
+        const antigo = { ...chamados[index] };
+        let statusMudou = false;
+
+        if (status && status !== antigo.status) {
+            chamados[index].status = status;
+            statusMudou = true;
+
+            // Gerar protocolo formal no primeiro atendimento
+            if (status === 'Em Atendimento' && !chamados[index].protocolo) {
+                const ano = new Date().getFullYear();
+                const random = Math.floor(1000 + Math.random() * 9000);
+                chamados[index].protocolo = `${ano}-CH${random}`;
+            }
+        }
+
+        if (observacao !== undefined) chamados[index].observacao = observacao;
+
+        // Histórico
+        if (!chamados[index].historico) chamados[index].historico = [];
+        if (statusMudou || (observacao !== undefined && observacao !== antigo.observacao)) {
+            chamados[index].historico.push({
+                status: chamados[index].status,
+                data: new Date().toISOString(),
+                observacao: observacao || (statusMudou ? 'Status alterado pelo suporte.' : 'Informações atualizadas.')
+            });
+        }
+
+        await fs.writeJson(DATA_FILE, chamados);
+        const atualizado = chamados[index];
+
+        // Notificar por e-mail se houver mudança relevante
+        const mailOptions = {
+            from: 'smtp_glpi@oabce.org.br',
+            to: atualizado.email,
+            subject: `Atualização: ${atualizado.status} - Protocolo ${atualizado.protocolo || atualizado.id}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; color: #333;">
+                    <h2 style="color: #254E70;">Olá, ${atualizado.nome}</h2>
+                    <p>Seu chamado teve uma atualização de status: <strong>${atualizado.status}</strong></p>
+                    <p><strong>Parecer Técnico:</strong> ${atualizado.observacao || 'Em análise.'}</p>
+                </div>
+            `
+        };
+        transporter.sendMail(mailOptions).catch(e => console.error("Erro e-mail update:", e));
+
+        res.status(200).json(atualizado);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao atualizar' });
     }
 });
 
