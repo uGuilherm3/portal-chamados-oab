@@ -95,6 +95,8 @@
                         <option value="Todos">Todos os Status</option>
                         <option value="Aberto">Aberto</option>
                         <option value="Em Atendimento">Em Atendimento</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Pendencia Concluída">Pendencia Concluída</option>
                         <option value="Concluído">Concluído</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
@@ -137,6 +139,8 @@
                         <select id="updateStatus" class="bg-transparent text-white font-bold text-sm outline-none border-none w-full cursor-pointer">
                             <option value="Aberto">Aberto</option>
                             <option value="Em Atendimento">Em Atendimento</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Pendencia Concluída">Pendencia Concluída</option>
                             <option value="Concluído">Concluído</option>
                             <option value="Cancelado">Cancelado</option>
                         </select>
@@ -176,6 +180,13 @@
                 <div class="space-y-4">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Descrição do Problema</h4>
                     <div id="modalDescricao" class="bg-[#131313] p-6 rounded-xl text-sm leading-relaxed text-slate-300 whitespace-pre-line"></div>
+                </div>
+
+                <div id="modalHistoricoSection" class="space-y-4 hidden">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Linha do Tempo / Atualizações</h4>
+                    <div id="modalTimeline" class="space-y-3">
+                        <!-- Itens do histórico entram aqui -->
+                    </div>
                 </div>
 
                 <div id="modalImagensSection" class="space-y-4 hidden">
@@ -343,6 +354,8 @@
             switch(status) {
                 case 'Aberto': return 'bg-emerald-500/10 text-emerald-500';
                 case 'Em Atendimento': return 'bg-blue-500/10 text-blue-500';
+                case 'Pendente': return 'bg-amber-500/10 text-amber-500';
+                case 'Pendencia Concluída': return 'bg-sky-500/10 text-sky-500';
                 case 'Concluído': return 'bg-slate-500/10 text-slate-400';
                 case 'Cancelado': return 'bg-red-500/10 text-red-500';
                 default: return 'bg-[#131313] text-slate-300';
@@ -365,6 +378,24 @@
             document.getElementById('modalDescricao').textContent = c.descricao;
             document.getElementById('updateStatus').value = c.status;
             document.getElementById('updateObservacao').value = c.observacao || '';
+
+            // Histórico / Timeline
+            const histSection = document.getElementById('modalHistoricoSection');
+            const histContainer = document.getElementById('modalTimeline');
+            if (c.historico && c.historico.length > 0) {
+                histSection.classList.remove('hidden');
+                histContainer.innerHTML = c.historico.slice().reverse().map(h => `
+                    <div class="bg-[#131313] p-4 rounded-xl border-l-2 ${h.status === 'Informação Atualizada' ? 'border-sky-500' : 'border-[#8D3046]'}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[9px] font-bold uppercase tracking-widest ${h.status === 'Informação Atualizada' ? 'text-sky-500' : 'text-slate-500'}">${h.status}</span>
+                            <span class="text-[9px] text-slate-600">${new Date(h.data).toLocaleString()}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">${h.observacao}</p>
+                    </div>
+                `).join('');
+            } else {
+                histSection.classList.add('hidden');
+            }
 
             // Imagens
             const imgSection = document.getElementById('modalImagensSection');
@@ -400,7 +431,12 @@
         async function saveChanges() {
             const btn = document.getElementById('btnSave');
             const status = document.getElementById('updateStatus').value;
-            const observacao = document.getElementById('updateObservacao').value;
+            let observacao = document.getElementById('updateObservacao').value;
+
+            // Prevenção contra o bug do '--'
+            if (observacao === '--' || (observacao && observacao.trim() === '')) {
+                observacao = '';
+            }
 
             btn.disabled = true;
             btn.innerHTML = 'Salvando...';

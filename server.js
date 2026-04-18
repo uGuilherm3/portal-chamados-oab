@@ -4,17 +4,18 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs-extra');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const DATA_FILE = path.join(__dirname, 'data', 'chamados.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+
+// Configurações Supabase (Usando as chaves fornecidas pelo usuário)
+const SUPABASE_URL = 'https://vhfjuttwavxuxeceffpa.supabase.co';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZmp1dHR3YXZ4dXhlY2VmZnBhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQ4OTg3MywiZXhwIjoyMDkyMDY1ODczfQ.Q8OA-hb6-u9UTbHwbC5KsYirS7YvM94DfE9gGJG1lPY';
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Garantir que os diretórios existam
 fs.ensureDirSync(UPLOADS_DIR);
-fs.ensureFileSync(DATA_FILE);
-if (!fs.readFileSync(DATA_FILE, 'utf8')) {
-    fs.writeJsonSync(DATA_FILE, []);
-}
 
 app.use(cors());
 app.use(express.json());
@@ -33,7 +34,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }
+    limits: { fileSize: 4 * 1024 * 1024 } // Limite de 4MB por arquivo
 });
 
 const transporter = nodemailer.createTransport({
@@ -47,7 +48,7 @@ const transporter = nodemailer.createTransport({
     tls: { rejectUnauthorized: false }
 });
 
-// Login Simples
+// Login Simples (Mantido por compatibilidade)
 app.post('/api/login', (req, res) => {
     const { usuario, senha } = req.body;
     if (usuario === 'adm' && senha === '1234') {
@@ -57,42 +58,53 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Listar Chamados (Para o Painel do Agente)
+// Listar Chamados (Busca do Supabase)
 app.get('/api/chamados', async (req, res) => {
     try {
-        const chamados = await fs.readJson(DATA_FILE);
-        res.status(200).json(chamados);
+        const { data, error } = await supabase
+            .from('chamados')
+            .select('*')
+            .order('data', { ascending: false });
+
+        if (error) throw error;
+        
+        // Mapear id para id_legado para manter compatibilidade com o front se necessário
+        // Mas o front provavelmente usa o 'id' retornado.
+        res.status(200).json(data);
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao ler chamados' });
+        console.error("Erro ao listar chamados:", error);
+        res.status(500).json({ error: 'Erro ao ler chamados do banco' });
     }
 });
 
-// Endpoint Público de Consulta (Seguro) - Busca por ID, Protocolo ou CPF
+// Endpoint Público de Consulta (Seguro) - Busca no Supabase
 app.get('/api/public/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const chamados = await fs.readJson(DATA_FILE);
+        const normalizedId = id.replace(/\D/g, '');
 
-        // Procurar por ID, Protocolo ou CPF
-        // Filtramos todos para o caso de busca por CPF (que pode ter vários)
-        const resultados = chamados.filter(c => 
-            (c.id && c.id === id) || 
-            (c.protocolo && c.protocolo === id) || 
-            (c.cpf && c.cpf === id) || 
-            (c.cpf && c.cpf.replace(/\D/g, '') === id.replace(/\D/g, '')) // Busca ignorando pontuação
-        );
+        const { data: resultados, error } = await supabase
+            .from('chamados')
+            .select('*')
+            .or(`id_legado.eq.${id},protocolo.eq.${id},cpf.eq.${id},cpf.eq.${normalizedId}`);
 
-        if (resultados.length === 0) return res.status(404).json({ error: 'Nenhum chamado encontrado.' });
+        if (error) throw error;
+        if (!resultados || resultados.length === 0) return res.status(404).json({ error: 'Nenhum chamado encontrado.' });
 
-        // Retorna apenas dados não sensíveis de todos os encontrados
         const simplificados = resultados.map( chamado => ({
-            id: chamado.id,
+            id: chamado.id_legado || chamado.id,
             protocolo: chamado.protocolo || 'Aguardando Atendimento',
             status: chamado.status,
             observacao: chamado.observacao,
             data: chamado.data,
             assunto: chamado.assunto,
             nome: chamado.nome,
+            cpf: chamado.cpf,
+            email: chamado.email,
+            telefone: chamado.telefone,
+            numero: chamado.numero,
+            descricao: chamado.descricao,
+            categoria_id: chamado.categoria_id,
             historico: chamado.historico || [{ status: 'Aberto', data: chamado.data, observacao: 'Chamado registrado no sistema.' }]
         }));
 
@@ -102,57 +114,87 @@ app.get('/api/public/chamados/:id', async (req, res) => {
     }
 });
 
-// Atualizar Status/Observação do Chamado
+// Listar Categorias (Público)
+app.get('/api/public/categorias', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('categorias')
+            .select('*')
+            .eq('ativo', true)
+            .order('nome');
+
+        if (error) throw error;
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao carregar categorias' });
+    }
+});
+
+// Atualizar Status/Observação do Chamado (No Supabase)
 app.patch('/api/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
         let { status, observacao } = req.body;
 
-        // Corrigir bug de enviar "--" infinitamente ou observações vazias
+        // CORREÇÃO: Evitar "--" infinito ou observações vazias
         if (observacao === '--' || (observacao && observacao.trim() === '')) {
-            observacao = undefined;
+            observacao = null;
         }
 
-        let chamados = await fs.readJson(DATA_FILE);
+        // Buscar chamado atual
+        // Usamos aspas para garantir que o ID (UUID ou string) seja tratado corretamente na query OR
+        const { data: chamadoAtual, error: fetchError } = await supabase
+            .from('chamados')
+            .select('*')
+            .or(`id.eq."${id}",id_legado.eq."${id}"`)
+            .single();
 
-        const index = chamados.findIndex(c => c.id === id);
-        if (index === -1) return res.status(404).json({ error: 'Chamado não encontrado' });
+        if (fetchError || !chamadoAtual) return res.status(404).json({ error: 'Chamado não encontrado' });
 
-        const chamadoAntigo = { ...chamados[index] };
+        const updates = {};
         let statusMudou = false;
 
-        if (status && status !== chamadoAntigo.status) {
-            chamados[index].status = status;
+        if (status && status !== chamadoAtual.status) {
+            updates.status = status;
             statusMudou = true;
 
-            // Gerar protocolo se estiver em "Em Atendimento" pela primeira vez
-            if (status === 'Em Atendimento' && !chamados[index].protocolo) {
+            if (status === 'Em Atendimento' && !chamadoAtual.protocolo) {
                 const ano = new Date().getFullYear();
-                const random = Math.floor(1000 + Math.random() * 9000); // 4 dígitos aleatórios
-                chamados[index].protocolo = `${ano}-CH${random}`;
+                
+                // Contar quantos chamados já possuem protocolo no ano atual para gerar o sequencial
+                const { count, error: countError } = await supabase
+                    .from('chamados')
+                    .select('*', { count: 'exact', head: true })
+                    .not('protocolo', 'is', null);
+
+                const sequencial = (count || 0) + 1;
+                updates.protocolo = `${ano}E${sequencial.toString().padStart(4, '0')}`;
             }
         }
 
-        if (observacao !== undefined) chamados[index].observacao = observacao;
+        if (observacao !== null) updates.observacao = observacao;
 
-        // Registrar no histórico se o status mudou ou se houve nova observação para o histórico
-        if (!chamados[index].historico) {
-            chamados[index].historico = [{ status: 'Aberto', data: chamadoAntigo.data, observacao: 'Chamado registrado no sistema.' }];
-        }
-
-        if (statusMudou || (observacao !== undefined && observacao !== chamadoAntigo.observacao)) {
-            chamados[index].historico.push({
-                status: chamados[index].status,
+        // Atualizar Histórico
+        const historico = chamadoAtual.historico || [];
+        if (statusMudou || (observacao !== null && observacao !== chamadoAtual.observacao)) {
+            historico.push({
+                status: updates.status || chamadoAtual.status,
                 data: new Date().toISOString(),
                 observacao: observacao || (statusMudou ? 'Status atualizado pelo técnico.' : 'Observação atualizada.')
             });
+            updates.historico = historico;
         }
 
-        await fs.writeJson(DATA_FILE, chamados);
+        const { data: chamadoAtualizado, error: updateError } = await supabase
+            .from('chamados')
+            .update(updates)
+            .eq('id', chamadoAtual.id)
+            .select()
+            .single();
 
-        const chamadoAtualizado = chamados[index];
+        if (updateError) throw updateError;
 
-        // Enviar E-mail de Notificação ao Solicitante
+        // Enviar E-mail de Notificação
         const mailOptions = {
             from: 'smtp_glpi@oabce.org.br',
             to: chamadoAtualizado.email,
@@ -178,18 +220,109 @@ app.patch('/api/chamados/:id', async (req, res) => {
 
         res.status(200).json(chamadoAtualizado);
     } catch (error) {
+        console.error("Erro ao atualizar:", error);
         res.status(500).json({ error: 'Erro ao atualizar chamado' });
     }
 });
 
+// Resolver Pendência (Público) com suporte a arquivos
+app.patch('/api/public/chamados/:id/resolver', upload.array('imagens', 4), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { email, telefone, nova_observacao, cpf, nome, assunto, descricao, categoria_id } = req.body;
+        const novosArquivos = req.files || [];
+
+        // Buscar chamado atual
+        console.log("Tentando resolver pendência para:", id);
+        
+        // Verifica se é um UUID válido para evitar erro de sintaxe do Postgres
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+        const orFilter = isUUID 
+            ? `id.eq.${id},protocolo.eq.${id},id_legado.eq.${id}`
+            : `protocolo.eq.${id},id_legado.eq.${id}`;
+
+        const { data: chamado, error: fetchError } = await supabase
+            .from('chamados')
+            .select('*')
+            .or(orFilter)
+            .single();
+
+        if (fetchError) {
+            console.error("Erro Supabase Fetch:", fetchError);
+            return res.status(404).json({ error: 'Chamado não encontrado' });
+        }
+
+        // Validação de Tamanho Total (4MB) incluindo novos arquivos
+        const tamanhoNovos = novosArquivos.reduce((acc, f) => acc + f.size, 0);
+        if (tamanhoNovos > 4 * 1024 * 1024) {
+             return res.status(400).json({ error: 'O tamanho total dos novos anexos excede 4MB.' });
+        }
+
+        const updates = { 
+            status: 'Pendencia Concluída',
+            email: email || chamado.email,
+            telefone: telefone || chamado.telefone,
+            nome: nome || chamado.nome,
+            cpf: cpf || chamado.cpf,
+            assunto: assunto || chamado.assunto,
+            descricao: descricao || chamado.descricao,
+            categoria_id: categoria_id || chamado.categoria_id,
+            imagens: [...(chamado.imagens || []), ...novosArquivos.map(f => `/uploads/${f.filename}`)]
+        };
+
+        // Adicionar ao histórico
+        const historico = chamado.historico || [];
+        historico.push({
+            status: 'Pendencia Concluída',
+            data: new Date().toISOString(),
+            observacao: nova_observacao || 'O usuário atualizou os dados do chamado para resolver pendências.'
+        });
+        updates.historico = historico;
+
+        const { data: atualizado, error: updateError } = await supabase
+            .from('chamados')
+            .update(updates)
+            .eq('id', chamado.id)
+            .select()
+            .single();
+
+        if (updateError) {
+            console.error("Erro ao atualizar chamado no Supabase:", updateError);
+            return res.status(500).json({ error: 'Erro ao salvar alterações no banco de dados' });
+        }
+
+        console.log("Chamado atualizado com sucesso para Pendencia Concluída:", atualizado.protocolo);
+        res.status(200).json(atualizado);
+    } catch (error) {
+        console.error("Erro ao resolver:", error);
+        res.status(500).json({ error: 'Erro ao resolver pendência' });
+    }
+});
 app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
     try {
-        const { nome, cpf, email, telefone, numero, assunto, descricao } = req.body;
+        const { nome, cpf, email, telefone, numero, assunto, descricao, categoria_id } = req.body;
         const arquivos = req.files || [];
+        
+        // Validação de Tamanho Total (4MB) no Servidor
+        const tamanhoTotal = arquivos.reduce((acc, f) => acc + f.size, 0);
+        if (tamanhoTotal > 4 * 1024 * 1024) {
+            return res.status(400).json({ error: 'O tamanho total dos anexos excede 4MB.' });
+        }
 
-        // Criar objeto do chamado para salvar no JSON
+        const idGerado = Date.now().toString();
+        const ano = new Date().getFullYear();
+
+        // Gerar Protocolo Sequencial Imediato
+        const { count, error: countError } = await supabase
+            .from('chamados')
+            .select('*', { count: 'exact', head: true });
+        
+        const sequencial = (count || 0) + 1;
+        const protocoloGerado = `${ano}E${sequencial.toString().padStart(4, '0')}`;
+
         const novoChamado = {
-            id: Date.now().toString(),
+            id_legado: idGerado,
+            protocolo: protocoloGerado,
             data: new Date().toISOString(),
             nome,
             cpf,
@@ -197,6 +330,7 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             telefone,
             numero,
             assunto,
+            categoria_id: categoria_id || null,
             descricao,
             status: 'Aberto',
             observacao: '',
@@ -210,25 +344,28 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             ]
         };
 
-        // Salvar no JSON
-        const chamados = await fs.readJson(DATA_FILE);
-        chamados.unshift(novoChamado); // Adiciona no início
-        await fs.writeJson(DATA_FILE, chamados);
+        const { data, error } = await supabase
+            .from('chamados')
+            .insert(novoChamado)
+            .select()
+            .single();
 
+        if (error) throw error;
+        
         // Enviar E-mail
         const anexosFormatados = arquivos.map(file => ({
             filename: file.originalname,
-            path: file.path // Agora usamos o path do arquivo no disco
+            path: file.path
         }));
 
         const mailOptions = {
             from: 'smtp_glpi@oabce.org.br',
             replyTo: email,
-            to: 'chamado@oabce.org.br', // Alterado conforme conversas anteriores
-            subject: `Novo Chamado: ${assunto} - ${nome}`,
+            to: 'chamado@oabce.org.br',
+            subject: `Novo Chamado: ${assunto} - ${protocoloGerado}`,
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; color: #333;">
-                    <h2 style="color: #8D3046;">Novo Chamado Aberto (#${novoChamado.id})</h2>
+                <div style="font-family: sans-serif; max-width: 600px; color: #333; text-align: left;">
+                    <h2 style="color: #8D3046;">Novo Chamado Aberto (#${protocoloGerado})</h2>
                     <p><strong>Assunto:</strong> ${assunto}</p>
                     <hr>
                     <p><strong>Solicitante:</strong> ${nome}</p>
@@ -244,8 +381,9 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
             attachments: anexosFormatados
         };
 
-        await transporter.sendMail(mailOptions);
-        res.status(200).json({ message: 'Chamado enviado e registrado!', id: novoChamado.id });
+        transporter.sendMail(mailOptions).catch(err => console.error("Erro ao enviar e-mail de criação:", err));
+
+        res.status(200).json({ message: 'Chamado enviado e registrado!', id: protocoloGerado, protocolo: protocoloGerado });
 
     } catch (error) {
         console.error("ERRO AO PROCESSAR CHAMADO:", error);
@@ -253,4 +391,4 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
+app.listen(3000, () => console.log('Servidor rodando na porta 3000 com integração Supabase'));
