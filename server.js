@@ -20,7 +20,7 @@ fs.ensureDirSync(UPLOADS_DIR);
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuração do Multer para persistência em disco
 const storage = multer.diskStorage({
@@ -106,6 +106,7 @@ app.get('/api/public/chamados/:id', async (req, res) => {
             numero: chamado.numero,
             descricao: chamado.descricao,
             categoria_id: chamado.categoria_id,
+            imagens: chamado.imagens || chamado.imagen || [],
             historico: chamado.historico || [{ status: 'Aberto', data: chamado.data, observacao: 'Chamado registrado no sistema.' }]
         }));
 
@@ -135,7 +136,7 @@ app.get('/api/public/categorias', async (req, res) => {
 app.patch('/api/chamados/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        let { status, observacao } = req.body;
+        let { status, observacao, prioridade } = req.body;
 
         // CORREÇÃO: Evitar "--" infinito ou observações vazias
         if (observacao === '--' || (observacao && observacao.trim() === '')) {
@@ -174,6 +175,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
         }
 
         if (observacao !== null) updates.observacao = observacao;
+        if (prioridade) updates.prioridade = prioridade;
 
         // Atualizar Histórico
         const historico = chamadoAtual.historico || [];
@@ -197,7 +199,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
 
         // Enviar E-mail de Notificação
         const mailOptions = {
-            from: 'smtp_glpi@oabce.org.br',
+            from: 'ti@oabce.org.br',
             to: chamadoAtualizado.email,
             subject: `Atualização de Chamado: ${chamadoAtualizado.status} - Protocolo ${chamadoAtualizado.protocolo || chamadoAtualizado.id}`,
             html: `
