@@ -5,6 +5,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs-extra');
 const { createClient } = require('@supabase/supabase-js');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { convert } = require('html-to-text');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
 const app = express();
 
@@ -17,6 +22,44 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Garantir que os diretórios existam
 fs.ensureDirSync(UPLOADS_DIR);
+
+// Chave e helper do Gemini (chamada REST direta)
+const GEMINI_API_KEY = 'AIzaSyCAsPFliHuNKeC57zEMX4qxScdSztpZHnk';
+
+async function perguntarGemini(prompt) {
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+        })
+    });
+    if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(`Gemini API error: ${JSON.stringify(err)}`);
+    }
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta';
+}
+
+// Diagnóstico: lista modelos disponíveis para a chave
+async function diagnosticarChave() {
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.models) {
+            console.log('[GEMINI] ✅ Chave válida! Modelos disponíveis:');
+            data.models.forEach(m => console.log('  -', m.name));
+        } else {
+            console.log('[GEMINI] ❌ Problema com a chave:', JSON.stringify(data));
+        }
+    } catch (e) {
+        console.log('[GEMINI] ❌ Erro ao verificar chave:', e.message);
+    }
+}
+diagnosticarChave();
 
 app.use(cors());
 app.use(express.json());
@@ -35,7 +78,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 4 * 1024 * 1024 } // Limite de 4MB por arquivo
+    limits: { fileSize: 20 * 1024 * 1024 } // Aumentado para 20MB
 });
 
 const transporter = nodemailer.createTransport({
@@ -391,4 +434,225 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
     }
 });
 
-app.listen(3000, () => console.log('Servidor rodando na porta 3000 com integração Supabase'));
+// ==========================================
+// BOT DE CONHECIMENTO (IA / RAG)
+// ==========================================
+
+// 1. Endpoint para o Bot "aprender" uma página da web
+app.post('/api/bot/learn', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+
+        console.log(`[BOT] Raspando dados de: ${url}`);
+
+        const response = await axios.get(url, { 
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            timeout: 10000 
+        });
+        
+        const $ = cheerio.load(response.data);
+        const titulo = $('title').text() || url;
+
+        // Tenta focar apenas no conteúdo útil da página (excluindo menus e widgets)
+        // Remove elementos indesejados antes da conversão
+        $('nav, footer, script, style, .sidebar, .menu, #header, .header, .footer').remove();
+        
+        // Prioriza tags de conteúdo
+        const mainHtml = $('main, article, #content, .content, .post-content, .entry-content, #main').html() || $('body').html();
+
+        const textoLimpo = convert(mainHtml, {
+            wordwrap: 130,
+            selectors: [
+                { selector: 'a', options: { ignoreHref: true } },
+                { selector: 'img', format: 'skip' },
+                { selector: 'table', uppercaseHeader: true },
+                { selector: 'h1', uppercase: true },
+                { selector: 'h2', uppercase: true }
+            ]
+        });
+
+        const { data, error } = await supabase
+            .from('base_conhecimento')
+            .upsert({ 
+                url, 
+                titulo, 
+                conteudo: textoLimpo,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'url' })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        res.status(200).json({ 
+            message: `O bot consumiu a inteligência de: ${data.titulo} e ficou mais forte!`, 
+            titulo: data.titulo 
+        });
+
+    } catch (error) {
+        console.error("[BOT ERROR] learn:", error.message);
+        res.status(500).json({ error: 'Erro ao tentar ler esta página: ' + error.message });
+    }
+});
+
+// 2. Endpoint para o Bot aprender através de ARQUIVOS (PDF, DOCX)
+app.post('/api/bot/upload', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+
+        const filePath = req.file.path;
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
+        let extractedText = '';
+        let titulo = req.file.originalname;
+
+        if (fileExt === '.pdf') {
+            const dataBuffer = fs.readFileSync(filePath);
+            
+            console.log("[BOT DEBUG] Investigando chaves do pdf-parse:", Object.keys(pdfParse));
+
+            // Busca exaustiva: tenta encontrar QUALQUER função no objeto
+            let parseFunction = typeof pdfParse === 'function' ? pdfParse : null;
+            
+            if (!parseFunction) {
+                // Se não é a função direta, procura nos valores do objeto
+                parseFunction = Object.values(pdfParse).find(v => typeof v === 'function');
+            }
+
+            if (!parseFunction) {
+                const keys = Object.keys(pdfParse).join(', ');
+                throw new Error(`Biblioteca PDF carregou como objeto, mas sem funções. Chaves encontradas: [${keys}]`);
+            }
+
+            let data;
+            try {
+                // Tenta como função normal
+                data = await parseFunction(dataBuffer);
+            } catch (error) {
+                // Se o erro for de construtor de classe, tenta com 'new'
+                if (error.message.includes("cannot be invoked without 'new'")) {
+                    console.log("[BOT] Tentando instanciar biblioteca como Classe...");
+                    const Parser = parseFunction;
+                    data = await new Parser(dataBuffer);
+                } else {
+                    throw error;
+                }
+            }
+
+            extractedText = "";
+            if (typeof data === 'string') {
+                extractedText = data;
+            } else if (data && data.text) {
+                extractedText = data.text;
+            } else if (data && data.value) {
+                extractedText = data.value;
+            } else {
+                // Se nada funcionar, tenta converter o objeto todo para string para não vir vazio
+                extractedText = String(data);
+            }
+
+            console.log(`[BOT] Sucesso absoluto! PDF lido (${extractedText.length} caracteres).`);
+        } else if (fileExt === '.docx') {
+            const data = await mammoth.extractRawText({ path: filePath });
+            extractedText = data.value;
+        } else {
+            return res.status(400).json({ error: 'Formato não suportado. Use PDF ou DOCX.' });
+        }
+
+        // Limpeza de caracteres que o Postgres não aceita (\u0000)
+        const textoLimpo = extractedText.replace(/\0/g, '');
+
+        const { data: uploadResult, error: dbError } = await supabase
+            .from('base_conhecimento')
+            .upsert({ 
+                url: `file://${req.file.filename}`, 
+                titulo: titulo, 
+                conteudo: textoLimpo,
+                created_at: new Date().toISOString()
+            }, { onConflict: 'url' })
+            .select()
+            .single();
+
+        if (dbError) throw dbError;
+        if (fs.existsSync(filePath)) fs.removeSync(filePath);
+
+        res.status(200).json({ 
+            message: `O bot consumiu a inteligência de: ${uploadResult.titulo} e ficou mais forte!`, 
+            titulo: uploadResult.titulo 
+        });
+
+    } catch (error) {
+        console.error("[BOT ERROR] upload:", error);
+        res.status(500).json({ error: 'Erro ao processar arquivo: ' + error.message });
+    }
+});
+
+// 3. Endpoint para o Bot responder perguntas
+app.post('/api/bot/ask', async (req, res) => {
+    try {
+        const { question } = req.body;
+        if (!question) return res.status(400).json({ error: 'Pergunta é obrigatória' });
+
+        // Busca principal via textSearch
+        let { data: fontes, error: searchError } = await supabase
+            .from('base_conhecimento')
+            .select('titulo, conteudo, url, created_at')
+            .textSearch('conteudo', question, { config: 'portuguese', type: 'websearch' })
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+        if (searchError) throw searchError;
+
+        // Fallback: se não achou nada, tenta busca por palavras-chave no conteúdo (ILIKE)
+        if (!fontes || fontes.length === 0) {
+            const palavras = question.split(' ').filter(p => p.length > 3);
+            for (const palavra of palavras) {
+                const { data: fallback } = await supabase
+                    .from('base_conhecimento')
+                    .select('titulo, conteudo, url, created_at')
+                    .ilike('conteudo', `%${palavra}%`)
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+                if (fallback && fallback.length > 0) {
+                    fontes = fallback;
+                    break;
+                }
+            }
+        }
+
+        // Monta contexto para o Gemini (inclui URLs para o bot poder recomendar)
+        const contextText = (fontes && fontes.length > 0) 
+            ? fontes.map(f => `FONTE [${f.titulo}] (URL: ${f.url}):\n${f.conteudo}`).join('\n\n---\n\n')
+            : "NENHUM DOCUMENTO ENCONTRADO PARA ESTA PERGUNTA.";
+
+        const prompt = `
+            Você é um assistente de suporte técnico da OAB-CE.
+            
+            REGRAS OBRIGATÓRIAS:
+            1. Seja EXTREMAMENTE conciso. Máximo 3-4 frases curtas.
+            2. Se a resposta estiver no CONTEXTO, use-a diretamente e cite a fonte.
+            3. Se houver uma URL relevante no CONTEXTO, inclua-a como link markdown: [texto](url).
+            4. Se não houver contexto, responda brevemente com conhecimento geral.
+            5. NUNCA escreva parágrafos longos. Prefira listas curtas ou uma frase direta.
+
+            CONTEXTO:
+            ${contextText.substring(0, 20000)}
+
+            PERGUNTA:
+            "${question}"
+        `;
+
+        const responseText = await perguntarGemini(prompt);
+
+        res.status(200).json({ 
+            answer: responseText,
+            sources: fontes ? fontes.map(f => ({ titulo: f.titulo, url: f.url })) : []
+        });
+
+    } catch (error) {
+        console.error("[GEMINI ERROR]:", error);
+        res.status(500).json({ error: 'Erro ao processar sua pergunta com a IA' });
+    }
+});
+
+app.listen(3000, () => console.log('Servidor rodando na porta 3000 com integração Supabase e Bot de IA'));
