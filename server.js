@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const multer = require('multer');
@@ -10,56 +11,71 @@ const cheerio = require('cheerio');
 const { convert } = require('html-to-text');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
-
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // Configurações Supabase (Usando as chaves fornecidas pelo usuário)
-const SUPABASE_URL = 'https://vhfjuttwavxuxeceffpa.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZmp1dHR3YXZ4dXhlY2VmZnBhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjQ4OTg3MywiZXhwIjoyMDkyMDY1ODczfQ.Q8OA-hb6-u9UTbHwbC5KsYirS7YvM94DfE9gGJG1lPY';
+// Configurações Supabase (Puxando do .env)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Garantir que os diretórios existam
 fs.ensureDirSync(UPLOADS_DIR);
 
-// Chave e helper do Gemini (chamada REST direta)
-const GEMINI_API_KEY = 'AIzaSyCAsPFliHuNKeC57zEMX4qxScdSztpZHnk';
+// Chave e helper do Gemini (Puxando do .env)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 async function perguntarGemini(prompt) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-        })
-    });
-    if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(`Gemini API error: ${JSON.stringify(err)}`);
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'SUBSTITUA_PELA_NOVA_CHAVE') {
+        return "Erro: Configuração de IA pendente (Chave ausente).";
     }
-    const data = await resp.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta';
+    
+    try {
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        
+        // 👇 VERSÃO DA DO GEMINI
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+        
+    } catch (error) {
+        console.error("[GEMINI ERROR]:", error);
+        throw new Error("Falha na comunicação com Google Gemini.");
+    }
 }
 
-// Diagnóstico: lista modelos disponíveis para a chave
 async function diagnosticarChave() {
+    if (!process.env.GEMINI_API_KEY) return console.log("Chave não encontrada no .env");
+    
     try {
-        const url = `https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`;
+        console.log("[GEMINI] Consultando modelos liberados para sua chave...");
+        // Usando v1beta que costuma listar tudo
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`;
         const resp = await fetch(url);
         const data = await resp.json();
+        
         if (data.models) {
-            console.log('[GEMINI] ✅ Chave válida! Modelos disponíveis:');
-            data.models.forEach(m => console.log('  -', m.name));
+            console.log('\n✅ [GEMINI] Chave válida! Você tem acesso a estes modelos:');
+            // Filtrando só os que geram texto/conteúdo para facilitar
+            data.models
+                .filter(m => m.name.includes('gemini') && m.supportedGenerationMethods.includes('generateContent'))
+                .forEach(m => console.log(`👉 ${m.name.replace('models/', '')}`));
+            console.log('\n');
         } else {
-            console.log('[GEMINI] ❌ Problema com a chave:', JSON.stringify(data));
+            console.log('[GEMINI] ❌ A API retornou um erro:', data);
         }
     } catch (e) {
         console.log('[GEMINI] ❌ Erro ao verificar chave:', e.message);
     }
 }
+// Chame a função aqui no final (fora de qualquer rota)
 diagnosticarChave();
+// diagnosticarChave(); // Comentado para não dar erro no log se ainda não tiver a chave
 
 app.use(cors());
 app.use(express.json());
@@ -81,13 +97,14 @@ const upload = multer({
     limits: { fileSize: 20 * 1024 * 1024 } // Aumentado para 20MB
 });
 
+// Configurações SMTP (Puxando do .env)
 const transporter = nodemailer.createTransport({
     host: 'cloud54.mailgrid.net.br',
     port: 587,
     secure: false,
     auth: {
-        user: 'smtp_glpi@oabce.org.br',
-        pass: '4h}E*Ub&CEcpXa'
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
     },
     tls: { rejectUnauthorized: false }
 });
@@ -242,7 +259,7 @@ app.patch('/api/chamados/:id', async (req, res) => {
 
         // Enviar E-mail de Notificação
         const mailOptions = {
-            from: 'ti@oabce.org.br',
+            from: process.env.SMTP_FROM,
             to: chamadoAtualizado.email,
             subject: `Atualização de Chamado: ${chamadoAtualizado.status} - Protocolo ${chamadoAtualizado.protocolo || chamadoAtualizado.id}`,
             html: `
@@ -407,9 +424,9 @@ app.post('/api/chamados', upload.array('imagens', 4), async (req, res) => {
         }));
 
         const mailOptions = {
-            from: 'smtp_glpi@oabce.org.br',
+            from: process.env.SMTP_FROM,
             replyTo: email,
-            to: 'chamado@oabce.org.br',
+            to: process.env.SMTP_TO,
             subject: `Novo Chamado: ${assunto} - ${protocoloGerado}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; color: #333; text-align: left;">
@@ -642,7 +659,13 @@ app.post('/api/bot/ask', async (req, res) => {
             "${question}"
         `;
 
-        const responseText = await perguntarGemini(prompt);
+        let responseText;
+        try {
+            responseText = await perguntarGemini(prompt);
+        } catch (gemiError) {
+            console.error("[BOT] Falha na API Gemini:", gemiError.message);
+            responseText = "Desculpe, meu cérebro de IA está passando por uma manutenção técnica no momento (erro de API). Posso te ajudar com outra informação do sistema?";
+        }
 
         res.status(200).json({ 
             answer: responseText,
@@ -650,8 +673,8 @@ app.post('/api/bot/ask', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("[GEMINI ERROR]:", error);
-        res.status(500).json({ error: 'Erro ao processar sua pergunta com a IA' });
+        console.error("[BOT ERROR]:", error);
+        res.status(500).json({ error: 'Erro interno no servidor do Bot' });
     }
 });
 

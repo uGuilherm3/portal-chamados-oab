@@ -536,13 +536,12 @@
                 const data = await response.json();
 
                 if (response.ok && data.length > 0) {
+                    window.resultadosBusca = data; // Armazena globalmente sempre
+                    
                     // Se encontrar apenas 1, mostra direto os detalhes
                     if (data.length === 1) {
                         return exibirDetalhesChamado(data[0]);
                     }
-                    
-                    // Se encontrar vários, mostra a lista
-                    window.resultadosBusca = data; // Armazena globalmente para acesso rápido
                     formConsulta.classList.add('hidden');
                     resultado.innerHTML = `
                         <div class="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 pb-10">
