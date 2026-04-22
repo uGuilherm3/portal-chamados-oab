@@ -221,26 +221,42 @@ app.get('/api/public/chamados/:id', async (req, res) => {
 // ==========================================
 
 async function perguntarGemini(prompt, arquivosPDF = []) {
-    if (!process.env.GEMINI_API_KEY) throw new Error("Chave Gemini ausente.");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    try {
+        if (!process.env.GEMINI_API_KEY) throw new Error("Chave Gemini ausente.");
+        
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-    // Prepara a lista de informações (Texto da pergunta + Anexos)
-    const partesDoPrompt = [{ text: prompt }];
+        // Prepara a lista de informações (Texto da pergunta + Anexos)
+        const partesDoPrompt = [{ text: prompt }];
 
-    // Se houver PDFs, injeta eles diretamente na mente da IA
-    for (const pdf of arquivosPDF) {
-        partesDoPrompt.push({
-            inlineData: {
-                data: pdf.base64,
-                mimeType: "application/pdf"
-            }
-        });
+        // Se houver PDFs, injeta eles diretamente na mente da IA
+        for (const pdf of arquivosPDF) {
+            partesDoPrompt.push({
+                inlineData: {
+                    data: pdf.base64,
+                    mimeType: "application/pdf"
+                }
+            });
+        }
+
+        // Envia tudo de uma vez
+        const result = await model.generateContent(partesDoPrompt);
+        const responseText = result.response.text();
+        
+        // Garante que não retorne apenas traços ou mensagens de erro cruas
+        if (!responseText || responseText.trim() === "--") {
+            return "Não consegui formular uma resposta clara. Por favor, tente reformular sua pergunta.";
+        }
+        
+        return responseText;
+    } catch (error) {
+        console.error("[GEMINI API ERROR]:", error.message);
+        if (error.message.includes("API_KEY_INVALID") || error.message.includes("blocked")) {
+            return "Desculpe, meu serviço de IA está temporariamente indisponível (Erro de Autenticação). Por favor, tente novamente mais tarde.";
+        }
+        return "Não consegui processar sua pergunta no momento. Tente novamente.";
     }
-
-    // Envia tudo de uma vez
-    const result = await model.generateContent(partesDoPrompt);
-    return result.response.text();
 }
 
 app.post('/api/bot/ask', async (req, res) => {
@@ -253,7 +269,12 @@ app.post('/api/bot/ask', async (req, res) => {
 
         sessionToken = await glpiAPI.conectar();
         
-        const baseRes = await axios.get(`${glpiAPI.baseUrl}/KnowbaseItem/21?expand_dropdowns=true`, {
+        // =========================================================
+        // CORREÇÃO: Variável central para o ID do Artigo
+        // =========================================================
+        const idArtigo = 23; 
+        
+        const baseRes = await axios.get(`${glpiAPI.baseUrl}/KnowbaseItem/${idArtigo}?expand_dropdowns=true`, {
             headers: { 'App-Token': glpiAPI.appToken, 'Session-Token': sessionToken }
         });
         const artigoGLPI = baseRes.data;
@@ -263,7 +284,8 @@ app.post('/api/bot/ask', async (req, res) => {
 
         console.log(`[BOT] 2. Lendo o artigo: "${artigoGLPI.name}" e buscando anexos...`);
         try {
-            const docItemsRes = await axios.get(`${glpiAPI.baseUrl}/KnowbaseItem/21/Document_Item`, {
+            // Usa a mesma variável idArtigo aqui
+            const docItemsRes = await axios.get(`${glpiAPI.baseUrl}/KnowbaseItem/${idArtigo}/Document_Item`, {
                 headers: { 'App-Token': glpiAPI.appToken, 'Session-Token': sessionToken }
             });
 
